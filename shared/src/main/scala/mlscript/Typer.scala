@@ -39,7 +39,8 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
     val (tparams: List[TypeName], targs: List[TypeVariable]) = tparamsargs.unzip
     def wrapMethod(pt: PolymorphicType, prov: TypeProvenance): MethodType = {
       val thisTy = TypeRef(nme, targs)(prov)
-      MethodType(pt.level, S(FunctionType(singleTup(thisTy), pt.body)(prov)), nme)(prov)
+      val body = substThisType(pt.body)(TypeRef(nme, targs))
+      MethodType(pt.level, S(FunctionType(singleTup(thisTy), body)(prov)), nme)(prov)
     }
     def wrapMethod(mt: MethodType): MethodType =
       if (mt.body.nonEmpty) wrapMethod(mt.toPT, mt.prov) else mt.copy(parents = nme :: Nil)
@@ -264,7 +265,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
       case Without(base, ns) => fieldsOf(base, paramTags).filter(ns contains _._1)
       case TypeBounds(lb, ub) => fieldsOf(ub, paramTags)
       case _: ObjectTag | _: FunctionType | _: TupleType | _: TypeVariable
-        | _: NegType | _: ExtrType | _: ComposedType => Map.empty
+        | _: NegType | _: ExtrType | _: ComposedType | _: ThisType => Map.empty
     }
   }
   // ()
@@ -331,7 +332,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
             val t2 = travsersed + R(tv)
             tv.lowerBounds.forall(checkCycle(_)(t2)) && tv.upperBounds.forall(checkCycle(_)(t2))
           }
-          case _: ExtrType | _: ObjectTag | _: FunctionType | _: RecordType | _: TupleType => true
+          case _: ExtrType | _: ObjectTag | _: FunctionType | _: RecordType | _: TupleType | _: ThisType => true
         }
         // }()
         val rightParents = td.kind match {
@@ -518,6 +519,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
                   // ^ Note: we need to go to the next level here,
                   //    which is also done automatically by `typeLetRhs` in the case above
               ), reverseRigid2)
+              println(">> bodyTy: " + bodyTy)
               val mthTy = td2.wrapMethod(bodyTy, prov)
               if (rhs.isRight || !declared.isDefinedAt(nme.name)) {
                 if (top) thisCtx.addMth(S(td.nme.name), nme.name, mthTy)
@@ -613,7 +615,13 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
               S(defn)
             case (S(decl), N) => S(decl)
             case (N, N) => N
-          }).foreach(ss(mt, _))
+          }).foreach({ inheritedMt =>
+            println(s">> constrain with inherited method: ${inheritedMt.body}")
+            println(s">> replace `this` with ${td.nme}")
+            val body = inheritedMt.body.map { substThisType(_)(TypeRef(td.nme, td.targs)) }
+            val bmt = MethodType(inheritedMt.level, body, inheritedMt.parents)(inheritedMt.prov)
+            ss(mt, bmt)
+          })
           val mthTy = td.wrapMethod(mt)
           if (!decls.isDefinedAt(mn)) {
             // If the class declares that method explicitly,
@@ -659,6 +667,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
     def rec(ty: Type)(implicit ctx: Ctx, recVars: Map[TypeVar, TypeVariable]): SimpleType = ty match {
       case Top => ExtrType(false)(tyTp(ty.toLoc, "top type"))
       case Bot => ExtrType(true)(tyTp(ty.toLoc, "bottom type"))
+      case This => ThisType()(tyTp(ty.toLoc, "this type"))
       case Bounds(lb, ub) => TypeBounds(rec(lb), rec(ub))(tyTp(ty.toLoc,
         if (lb === Bot && ub === Top) "type wildcard" else "type bounds"))
       // case Tuple(fields) => TupleType(fields.map(f => f._1 -> rec(f._2)))(tp(ty.toLoc, "tuple type"))

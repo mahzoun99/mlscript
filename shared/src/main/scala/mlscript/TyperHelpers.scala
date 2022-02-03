@@ -65,6 +65,7 @@ abstract class TyperHelpers { self: Typer =>
   def subst(ts: SimpleType, map: Map[SimpleType, SimpleType])(implicit cache: MutMap[TypeVariable, SimpleType] = MutMap.empty): SimpleType = ts match {
     case _ if map.isDefinedAt(ts) => map(ts)
     case TypeBounds(lb, ub) => TypeBounds(subst(lb, map), subst(ub, map))(ts.prov)
+    case ThisType() => map.getOrElse(ts, ts)
     case FunctionType(lhs, rhs) => FunctionType(subst(lhs, map), subst(rhs, map))(ts.prov)
     case RecordType(fields) => RecordType(fields.map { case fn -> ft => fn -> subst(ft, map) })(ts.prov)
     case TupleType(fields) => TupleType(fields.map { case fn -> ft => fn -> subst(ft, map) })(ts.prov)
@@ -85,6 +86,28 @@ abstract class TyperHelpers { self: Typer =>
       v
     })
     case _: ObjectTag | _: ExtrType => ts
+  }
+
+  def substThisType(ts: SimpleType)(implicit me: TypeProvenance => TypeRef): SimpleType = ts match {
+    case FunctionType(lhs, rhs) => FunctionType(substThisType(lhs), substThisType(rhs))(ts.prov)
+    case RecordType(fields) => RecordType(fields.map { case fn -> ft => fn -> substThisType(ft) })(ts.prov)
+    case TupleType(fields) => TupleType(fields.map { case fn -> ft => fn -> substThisType(ft) })(ts.prov)
+    case ts: ExtrType => ts
+    case ComposedType(pol, lhs, rhs) => ComposedType(pol, substThisType(lhs), substThisType(rhs))(ts.prov)
+    case NegType(negated) => NegType(substThisType(negated))(ts.prov)
+    case Without(base, names) => Without(substThisType(base), names)(ts.prov)
+    case ProvType(underlying) => ProvType(substThisType(underlying))(ts.prov)
+    case WithType(base, rcd) =>
+      val rcd2 = RecordType(rcd.fields.map { case fn -> ft => fn -> substThisType(ft) })(rcd.prov)
+      WithType(substThisType(base), rcd2)(ts.prov)
+    case TypeRef(defn, targs) => TypeRef(defn, targs.map { substThisType(_) })(ts.prov)
+    case _: ClassTag => ts
+    case _: TraitTag => ts
+    case TypeBounds(lb, ub) => TypeBounds(substThisType(lb), substThisType(ub))(ts.prov)
+    case ThisType() => me(ts.prov)
+    case _: TypeVariable => ts
+    case NegVar(tv) => substThisType(tv)
+    case NegTrait(tt) => substThisType(tt)
   }
   
   def tupleIntersection(fs1: Ls[Opt[Var] -> SimpleType], fs2: Ls[Opt[Var] -> SimpleType]): Ls[Opt[Var] -> SimpleType] = {
@@ -391,6 +414,7 @@ abstract class TyperHelpers { self: Typer =>
       case TypeRef(d, ts) => ts
       case Without(b, ns) => b :: Nil
       case TypeBounds(lb, ub) => lb :: ub :: Nil
+      case ThisType() => Nil
     }
     
     def getVars: Set[TypeVariable] = {
