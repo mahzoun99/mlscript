@@ -37,13 +37,19 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
         baseClasses.iterator.filterNot(traversed).flatMap(v =>
           ctx.tyDefs.get(v.name).fold(Set.empty[Var])(_.allBaseClasses(ctx)(traversed + v)))
     val (tparams: List[TypeName], targs: List[TypeVariable]) = tparamsargs.unzip
-    def wrapMethod(pt: PolymorphicType, prov: TypeProvenance): MethodType = {
-      val thisTy = TypeRef(nme, targs)(prov)
-      val body = substThisType(pt.body)(TypeRef(nme, targs))
-      MethodType(pt.level, S(FunctionType(singleTup(thisTy), body)(prov)), nme)(prov)
+    def wrapMethod(st: SimpleType, prov: TypeProvenance): MethodType = {
+      MethodType(0, S(FunctionType(singleTup(thisTv), st)(prov)), nme)(prov)
     }
+    // def wrapMethod(pt: PolymorphicType, prov: TypeProvenance): MethodType = {
+    //   // val body = substThisType(pt.body)(TypeRef(nme, targs))
+    //   MethodType(pt.level, S(FunctionType(singleTup(thisTv), pt.body)(prov)), nme)(prov)
+    // }
     def wrapMethod(mt: MethodType): MethodType =
-      if (mt.body.nonEmpty) wrapMethod(mt.toPT, mt.prov) else mt.copy(parents = nme :: Nil)
+      if (mt.body.nonEmpty) wrapMethod(mt.body.getOrElse(errType), mt.prov) else mt.copy(parents = nme :: Nil)
+    val thisTyBase: TypeRef = TypeRef(nme, targs)(noProv)
+    val thisTv: TypeVariable = freshVar(noProv)(1)
+    thisTv.upperBounds ::= thisTyBase
+    println(s">> thistv created $thisTv")
   }
   
   private case class MethodDefs(
@@ -457,7 +463,9 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
         val reverseRigid = rigidtargs.lazyZip(td.targs).toMap
         def rec(tr: TypeRef, top: Bool = false)(ctx: Ctx): MethodDefs = {
           implicit val thisCtx: Ctx = ctx.nest
-          thisCtx += "this" -> tr
+          // val thisTv = freshVar(noProv) // TODO: provide prov
+          // thisTv.upperBounds ::= tr
+          thisCtx += "this" -> td.thisTv
           val td2 = ctx.tyDefs(tr.defn.name)
           val targsMap = td2.tparams.iterator.map(_.name).zip(tr.targs).toMap
           val declared = MutMap.empty[Str, Opt[Loc]]
@@ -502,11 +510,11 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
                 TraitTag(Var(p.name))(originProv(p.toLoc, "method type parameter", p.name)))
               val targsMap2 = targsMap ++ tparams.iterator.map(_.name).zip(dummyTargs2).toMap
               val reverseRigid2 = reverseRigid ++ dummyTargs2.map(t =>
-                t -> freshVar(t.prov, S(t.id.idStr))(thisCtx.lvl + 1))
+                t -> freshVar(t.prov, S(t.id.idStr))(thisCtx.lvl + 1)) + (td.thisTv -> td.thisTv)
               val bodyTy = subst(rhs.fold(
                 term => ctx.getMthDefn(prt.name, nme.name)
                   .fold(typeLetRhs(rec, nme.name, term)(thisCtx, raise, targsMap2))(mt =>
-                    subst(mt.toPT, td2.targs.lazyZip(tr.targs).toMap) match {
+                    subst(mt.toPT, td2.targs.lazyZip(tr.targs).toMap[ST, ST] + (td.thisTv -> td.thisTv)) match {
                       // Try to wnwrap one layer of prov, which would have been wrapped by the original call to `go`,
                       // and will otherwise mask the more precise new prov that contains "inherited"
                       case PolymorphicType(level, ProvType(underlying)) =>
@@ -520,7 +528,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
                   //    which is also done automatically by `typeLetRhs` in the case above
               ), reverseRigid2)
               println(">> bodyTy: " + bodyTy)
-              val mthTy = td2.wrapMethod(bodyTy, prov)
+              val mthTy = td2.wrapMethod(bodyTy.body, prov) // TODO
               if (rhs.isRight || !declared.isDefinedAt(nme.name)) {
                 if (top) thisCtx.addMth(S(td.nme.name), nme.name, mthTy)
                 thisCtx.addMth(N, nme.name, mthTy)
@@ -667,7 +675,10 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
     def rec(ty: Type)(implicit ctx: Ctx, recVars: Map[TypeVar, TypeVariable]): SimpleType = ty match {
       case Top => ExtrType(false)(tyTp(ty.toLoc, "top type"))
       case Bot => ExtrType(true)(tyTp(ty.toLoc, "bottom type"))
-      case This => ThisType()(tyTp(ty.toLoc, "this type"))
+      case This => ctx.env.getOrElse("this", err(msg"undeclared this" -> ty.toLoc :: Nil)) match {
+        case AbstractConstructor(absMths) => ???
+        case t: TypeScheme => t.instantiate
+      }
       case Bounds(lb, ub) => TypeBounds(rec(lb), rec(ub))(tyTp(ty.toLoc,
         if (lb === Bot && ub === Top) "type wildcard" else "type bounds"))
       // case Tuple(fields) => TupleType(fields.map(f => f._1 -> rec(f._2)))(tp(ty.toLoc, "tuple type"))

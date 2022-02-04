@@ -2,196 +2,21 @@
 
 class A
   method Foo: int -> this
+  method Bar = this
 //│ Defined class A
-//│ Declared A.Foo: A -> int -> A
+//│ Declared A.Foo: (A & 'a) -> int -> 'a
+//│ Defined A.Bar: (A & 'a) -> 'a
 
-:d
 class B: A
   method Foo n = this
-//│ 1. Typing type TypeName(A)
-//│ | vars=Map() newDefsInfo=Map(B -> (Cls,0))
-//│ => A | 
-//│ 1. Typing type Function(Tuple(List((None,TypeName(int)))),This)
-//│ | vars=Map() newDefsInfo=Map()
-//│ => ((Int) -> this) | 
-//│ >> bodyTy: PolymorphicType(0,((Int) -> this))
-//│ 1. Typing term ((n,) => this)
-//│ | 1. Typing pattern (n,)
-//│ | | 1. Typing pattern n
-//│ | | 1. : α0'
-//│ | 1. : (α0')
-//│ | 1. Typing term this
-//│ | 1. : [B]
-//│ 1. : ((α0') -> [B])
-//│ >> bodyTy: PolymorphicType(0,((α0') -> [B]))
-//│ >> Checking subsumption for inferred type of Foo : MethodType(0,Some([((α0') -> [B])]),List(TypeName(B)),true)
-//│ >> constrain with inherited method: Some([((Int) -> this)])
-//│ >> replace `this` with TypeName(B)
-//│ CONSTRAIN [((α1) -> [B])] <! [((Int) -> B)]
-//│   where 
-//│ C [((α1) -> [B])] <! [((Int) -> B)]
-//│ | C ((α1) -> [B]) <! [((Int) -> B)]
-//│ | | C ((α1) -> [B]) <! ((Int) -> B)
-//│ | | | C (Int) <! (α1)
-//│ | | | | C Int <! α1
-//│ | | | C [B] <! B
 //│ Defined class B
-//│ Typed as: ((B) -> [((α2) -> [B])])
-//│  where: 
-//│ ty[true] ((B) -> [((α2) -> [B])])
-//│ -> DNF(((B) -> [((α2) -> [B])]){})
-//│ DNF[true] DNF(((B) -> [((α2) -> [B])]){})
-//│ | ty[false] (B)
-//│ | -> DNF((B){})
-//│ | DNF[false] DNF((B){})
-//│ | | ty[false] B
-//│ | | -> DNF(b<a>{})
-//│ | | DNF[false] DNF(b<a>{})
-//│ | | ~> b<a>
-//│ | ~> (b<a>)
-//│ | ty[true] [((α2) -> [B])]
-//│ | -> DNF(((α2) -> [B]){})
-//│ | DNF[true] DNF(((α2) -> [B]){})
-//│ | | ty[false] (α2)
-//│ | | -> DNF((α2){})
-//│ | | DNF[false] DNF((α2){})
-//│ | | | ty[false] α2
-//│ | | | | Consider α2 List() List()
-//│ | | | -> DNF(α2)
-//│ | | | DNF[false] DNF(α2)
-//│ | | | | Renewed α2 ~> α3
-//│ | | | ~> α3
-//│ | | ~> (α3)
-//│ | | ty[true] [B]
-//│ | | -> DNF(b<a>{})
-//│ | | DNF[true] DNF(b<a>{})
-//│ | | ~> b<a>
-//│ | ~> ((α3) -> b<a>)
-//│ ~> ((b<a>) -> ((α3) -> b<a>))
-//│ Canon: ((b<a>) -> ((α3) -> b<a>))
-//│  where: 
-//│ ! false α3 None
-//│ [occs] LinkedHashMap((false,α3) -> HashSet(α3))
-//│ [vars] TreeSet(α3)
-//│ [bounds] 
-//│ [rec] HashSet()
-//│ [!] α3
-//│ [sub] α3 -> None
-//│ Type after simplification: ((b<a>) -> ((⊤) -> b<a>))
-//│  where: 
-//│ ty[true] ((b<a>) -> ((⊤) -> b<a>))
-//│ -> DNF(((b<a>) -> ((⊤) -> b<a>)){})
-//│ DNF[true] DNF(((b<a>) -> ((⊤) -> b<a>)){})
-//│ | ty[false] (b<a>)
-//│ | -> DNF((b<a>){})
-//│ | DNF[false] DNF((b<a>){})
-//│ | | ty[false] b<a>
-//│ | | -> DNF(b<a>{})
-//│ | | DNF[false] DNF(b<a>{})
-//│ | | ~> b<a>
-//│ | ~> (b<a>)
-//│ | ty[true] ((⊤) -> b<a>)
-//│ | -> DNF(((⊤) -> b<a>){})
-//│ | DNF[true] DNF(((⊤) -> b<a>){})
-//│ | | ty[false] (⊤)
-//│ | | -> DNF((⊤){})
-//│ | | DNF[false] DNF((⊤){})
-//│ | | | ty[false] ⊤
-//│ | | | -> DNF()
-//│ | | | DNF[false] DNF()
-//│ | | | ~> ⊤
-//│ | | ~> (⊤)
-//│ | | ty[true] b<a>
-//│ | | -> DNF(b<a>{})
-//│ | | DNF[true] DNF(b<a>{})
-//│ | | ~> b<a>
-//│ | ~> ((⊤) -> b<a>)
-//│ ~> ((b<a>) -> ((⊤) -> b<a>))
-//│ Recanon: ((b<a>) -> ((⊤) -> b<a>))
-//│  where: 
-//│ [occs] LinkedHashMap()
-//│ [vars] TreeSet()
-//│ [bounds] 
-//│ [rec] HashSet()
-//│ [sub] 
-//│ Resimplified: ((b<a>) -> ((⊤) -> b<a>))
-//│  where: 
-//│ Recons: ((B) -> ((⊤) -> B))
-//│ Defined B.Foo: B -> anything -> B
+//│ Defined B.Foo: (B & 'a) -> anything -> 'a
 
 a = B{}
 //│ a: B
 
-:d
 a.Foo 1 // : B
-//│ 0. Typing term (a.Foo (1,))
-//│ | 0. Typing term a.Foo
-//│ | | 0. Typing term a
-//│ | | 0. : [α0]
-//│ | | CONSTRAIN ((A) -> [((Int) -> A)]) <! (([α0]) -> α1)
-//│ | |   where α0 :> [[b<a>]]
-//│ | | C ((A) -> [((Int) -> A)]) <! (([α0]) -> α1)
-//│ | | | C ([α0]) <! (A)
-//│ | | | | C [α0] <! A
-//│ | | | | | C α0 <! A
-//│ | | | | | | C [[b<a>]] <! A
-//│ | | | | | | | C [b<a>] <! A
-//│ | | | | | | | | C b<a> <! A
-//│ | | | | | | | | | C b<a> <! a<>
-//│ | | | C [((Int) -> A)] <! α1
-//│ | | | | C ((Int) -> A) <! α1
-//│ | 0. : α1
-//│ | 0. Typing term (1,)
-//│ | | 0. Typing term 1
-//│ | | 0. : 1<int,number>
-//│ | 0. : (1<int,number>)
-//│ | CONSTRAIN [α1] <! ([(1<int,number>)] -> α2)
-//│ |   where α1 :> [[[((Int) -> A)]]]
-//│ | C [α1] <! ([(1<int,number>)] -> α2)
-//│ | | C α1 <! ([(1<int,number>)] -> α2)
-//│ | | | C [[[((Int) -> A)]]] <! ([(1<int,number>)] -> α2)
-//│ | | | | C [[((Int) -> A)]] <! ([(1<int,number>)] -> α2)
-//│ | | | | | C [((Int) -> A)] <! ([(1<int,number>)] -> α2)
-//│ | | | | | | C ((Int) -> A) <! ([(1<int,number>)] -> α2)
-//│ | | | | | | | C [(1<int,number>)] <! (Int)
-//│ | | | | | | | | C (1<int,number>) <! (Int)
-//│ | | | | | | | | | C 1<int,number> <! Int
-//│ | | | | | | | | | | C 1<int,number> <! int<number>
-//│ | | | | | | | C A <! α2
-//│ 0. : α2
-//│ Typed as: α2
-//│  where: α2 :> [[A]]
-//│ ty[true] α2
-//│ | Consider α2 List([[A]]) List()
-//│ -> DNF(α2 | a<>{})
-//│ DNF[true] DNF(α2 | a<>{})
-//│ | Renewed α2 ~> α3
-//│ ~> (a<> | α3)
-//│ Canon: (a<> | α3)
-//│  where: 
-//│ [occs] LinkedHashMap((true,α3) -> HashSet(α3, a<>))
-//│ [vars] TreeSet(α3)
-//│ [bounds] 
-//│ [rec] HashSet()
-//│ [!] α3
-//│ [sub] α3 -> None
-//│ Type after simplification: a<>
-//│  where: 
-//│ ty[true] a<>
-//│ -> DNF(a<>{})
-//│ DNF[true] DNF(a<>{})
-//│ ~> a<>
-//│ Recanon: a<>
-//│  where: 
-//│ [occs] LinkedHashMap()
-//│ [vars] TreeSet()
-//│ [bounds] 
-//│ [rec] HashSet()
-//│ [sub] 
-//│ Resimplified: a<>
-//│  where: 
-//│ Recons: A
-//│ res: A
+//│ res: B
 
 def b: A
 b = a
