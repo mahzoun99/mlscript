@@ -146,15 +146,6 @@ addTwo s n
 
 class Str_bad_0: Addable[Str_bad_0] & { val: string }
   method Add that = Str_bad_0 { val = this.val + that.val }
-//│ ╔══[ERROR] Type mismatch in operator application:
-//│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
-//│ ║        	                                      ^^^^^^^^^^
-//│ ╟── type `string` does not match type `int`
-//│ ║  l.+1: 	class Str_bad_0: Addable[Str_bad_0] & { val: string }
-//│ ║        	                                             ^^^^^^
-//│ ╟── but it flows into field selection with expected type `int`
-//│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
-//│ ╙──      	                                      ^^^^^^^^
 //│ ╔══[ERROR] Type mismatch in application:
 //│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
 //│ ║        	                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -174,5 +165,5 @@ class Str_bad_0: Addable[Str_bad_0] & { val: string }
 //│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
 //│ ╙──      	                                                 ^^^^^^^^
 //│ Defined class Str_bad_0
-//│ Defined Str_bad_0.Add: ('a & Str_bad_0) -> {val: int} -> (error | (Str_bad_0 with {val: error | int}))
+//│ Defined Str_bad_0.Add: (Str_bad_0 & {val: nothing}) -> {val: int} -> (error | (Str_bad_0 with {val: int}))
 

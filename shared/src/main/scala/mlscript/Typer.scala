@@ -37,19 +37,18 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
         baseClasses.iterator.filterNot(traversed).flatMap(v =>
           ctx.tyDefs.get(v.name).fold(Set.empty[Var])(_.allBaseClasses(ctx)(traversed + v)))
     val (tparams: List[TypeName], targs: List[TypeVariable]) = tparamsargs.unzip
-    def wrapMethod(st: SimpleType, prov: TypeProvenance): MethodType = {
-      MethodType(0, S(FunctionType(singleTup(thisTv), st)(prov)), nme)(prov)
+    def wrapMethod(lvl: Int, st: SimpleType, prov: TypeProvenance): MethodType = {
+      MethodType(lvl, S(FunctionType(singleTup(thisTv), st)(prov)), nme)(prov)
     }
-    // def wrapMethod(pt: PolymorphicType, prov: TypeProvenance): MethodType = {
-    //   // val body = substThisType(pt.body)(TypeRef(nme, targs))
-    //   MethodType(pt.level, S(FunctionType(singleTup(thisTv), pt.body)(prov)), nme)(prov)
-    // }
     def wrapMethod(mt: MethodType): MethodType =
-      if (mt.body.nonEmpty) wrapMethod(mt.body.getOrElse(errType), mt.prov) else mt.copy(parents = nme :: Nil)
+      if (mt.body.nonEmpty)
+        wrapMethod(mt.level, mt.body.getOrElse(errType), mt.prov)
+      else
+        mt.copy(parents = nme :: Nil)
+
     val thisTyBase: TypeRef = TypeRef(nme, targs)(noProv)
     val thisTv: TypeVariable = freshVar(noProv)(1)
     thisTv.upperBounds ::= thisTyBase
-    println(s">> thistv created $thisTv")
   }
   
   private case class MethodDefs(
@@ -527,8 +526,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
                   // ^ Note: we need to go to the next level here,
                   //    which is also done automatically by `typeLetRhs` in the case above
               ), reverseRigid2)
-              println(">> bodyTy: " + bodyTy)
-              val mthTy = td2.wrapMethod(bodyTy.body, prov) // TODO
+              val mthTy = td2.wrapMethod(bodyTy.level, bodyTy.body, prov) // TODO
               if (rhs.isRight || !declared.isDefinedAt(nme.name)) {
                 if (top) thisCtx.addMth(S(td.nme.name), nme.name, mthTy)
                 thisCtx.addMth(N, nme.name, mthTy)
