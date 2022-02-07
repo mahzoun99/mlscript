@@ -61,6 +61,18 @@ box2.inner + box2.Get
 //│ res: int
 //│    = 4
 
+def b: Box[string] & { inner: "hello" }
+b = Box "hello"
+//│ b: Box[string] & {inner: "hello"}
+//│ Box['T .. "hello" | 'T] with {inner: "hello"}
+//│   <:  b:
+//│ Box[string] & {inner: "hello"}
+//│  = Box { inner: 'hello' }
+
+b.Get
+//│ res: "hello"
+//│    = 'hello'
+
 :js
 class MyBox: Box[int] & { info: string }
   method Map f = Box (f this.inner) with { info = this.info }
