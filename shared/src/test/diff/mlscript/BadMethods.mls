@@ -807,7 +807,7 @@ class Test9A[A]: { x: A }
 class Test9B: Test9A[int]
 //│ Defined class Test9B
 
-:e
+// :e
 :NoJS
 error.(Test9B.Mth9A): nothing
 //│ res: nothing
