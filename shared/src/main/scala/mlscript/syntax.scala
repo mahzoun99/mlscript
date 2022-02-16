@@ -96,7 +96,6 @@ sealed abstract class NullaryType                        extends Type
 
 case object Top                                          extends NullaryType
 case object Bot                                          extends NullaryType
-case object This                                         extends NullaryType
 final case class Literal(lit: Lit)                       extends NullaryType
 
 final case class TypeName(name: Str)                    extends NullaryType
