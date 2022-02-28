@@ -65,7 +65,6 @@ abstract class TyperHelpers { self: Typer =>
   def subst(ts: SimpleType, map: Map[SimpleType, SimpleType])(implicit cache: MutMap[TypeVariable, SimpleType] = MutMap.empty): SimpleType = ts match {
     case _ if map.isDefinedAt(ts) => map(ts)
     case TypeBounds(lb, ub) => TypeBounds(subst(lb, map), subst(ub, map))(ts.prov)
-    case ThisType() => map.getOrElse(ts, ts)
     case FunctionType(lhs, rhs) => FunctionType(subst(lhs, map), subst(rhs, map))(ts.prov)
     case RecordType(fields) => RecordType(fields.map { case fn -> ft => fn -> subst(ft, map) })(ts.prov)
     case TupleType(fields) => TupleType(fields.map { case fn -> ft => fn -> subst(ft, map) })(ts.prov)
@@ -105,7 +104,6 @@ abstract class TyperHelpers { self: Typer =>
     case _: ClassTag => ts
     case _: TraitTag => ts
     case TypeBounds(lb, ub) => TypeBounds(substThisType(lb), substThisType(ub))(ts.prov)
-    case ThisType() => me(ts.prov)
     case _: TypeVariable => ts
     case NegVar(tv) => substThisType(tv)
     case NegTrait(tt) => substThisType(tt)
@@ -431,7 +429,6 @@ abstract class TyperHelpers { self: Typer =>
       case TypeRef(d, ts) => ts
       case Without(b, ns) => b :: Nil
       case TypeBounds(lb, ub) => lb :: ub :: Nil
-      case ThisType() => Nil
     }
     
     def getVars: Set[TypeVariable] = {

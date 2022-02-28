@@ -247,11 +247,6 @@ abstract class TyperDatatypes extends TyperHelpers { self: Typer =>
     def mk(lb: SimpleType, ub: SimpleType, prov: TypeProvenance = noProv)(implicit ctx: Ctx): SimpleType =
       if ((lb is ub) || lb === ub || lb <:< ub && ub <:< lb) lb else TypeBounds(lb, ub)(prov)
   }
-
-  case class ThisType()(val prov: TypeProvenance) extends SimpleType {
-    def level: Int = 0
-    override def toString = "this"
-  }
   
   /** A type variable living at a certain polymorphism level `level`, with mutable bounds.
    *  Invariant: Types appearing in the bounds never have a level higher than this variable's `level`. */
