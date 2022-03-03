@@ -37,18 +37,21 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
         baseClasses.iterator.filterNot(traversed).flatMap(v =>
           ctx.tyDefs.get(v.name).fold(Set.empty[Var])(_.allBaseClasses(ctx)(traversed + v)))
     val (tparams: List[TypeName], targs: List[TypeVariable]) = tparamsargs.unzip
-    def wrapMethod(lvl: Int, st: SimpleType, prov: TypeProvenance): MethodType = {
-      MethodType(lvl, S(FunctionType(singleTup(thisTv), st)(prov)), nme)(prov)
-    }
-    def wrapMethod(mt: MethodType): MethodType =
-      if (mt.body.nonEmpty)
-        wrapMethod(mt.level, mt.body.getOrElse(errType), mt.prov)
-      else
-        mt.copy(parents = nme :: Nil)
+    // def wrapMethod(lvl: Int, st: SimpleType, prov: TypeProvenance): MethodType = {
+    //   MethodType(lvl, S((thisTy(prov), st)), nme)(prov)
+    // }
+    // def wrapMethod(mt: MethodType): MethodType =
+    //   if (mt.body.nonEmpty)
+    //     wrapMethod(mt.level, mt.body.getOrElse(errType), mt.prov)
+    //   else
+    //     mt.copy(parents = nme :: Nil)
 
     val thisTyBase: TypeRef = TypeRef(nme, targs)(noProv)
     val thisTv: TypeVariable = freshVar(noProv)(1)
     thisTv.upperBounds ::= thisTyBase
+    def thisTy(implicit prov: TypeProvenance): TypeVariable = thisTv
+    def wrapMethod(pt: PolymorphicType, prov: TypeProvenance): MethodType =
+      MethodType(pt.level, S((thisTy(prov), pt.body)), nme)(prov)
   }
   
   private case class MethodDefs(
@@ -74,9 +77,13 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
               TypeProvenance(tn.toLoc, "inherited method declaration")))
         }
       )
-    private def addParent(prt: TypeName): MethodDefs =
-      copy(decls = decls.view.mapValues(mt => mt.copy(parents = prt :: mt.parents)).toMap)
-    def propagate(top: Bool = true)(implicit raise: Raise): MethodDefs =
+    private def addParent(prt: TypeName)(implicit ctx: Ctx): MethodDefs = {
+      val td = ctx.tyDefs(prt.name)
+      def addThis(mt: MethodType): MethodType = mt.copy(body = mt.body.map(b => b.copy(_1 = td.thisTy(mt.prov))))
+      def add(mt: MethodType): MethodType = mt.copy(parents = prt :: mt.parents)
+      copy(decls = decls.view.mapValues(addThis).mapValues(add).toMap, defns = defns.view.mapValues(addThis).toMap)
+    }
+    def propagate(top: Bool = true)(implicit ctx: Ctx, raise: Raise): MethodDefs =
       parents.map(_.propagate(false)).reduceOption(_.&(_)(tn, defns.keySet)).map(_.addParent(tn))
         .foldRight(if (top) MethodDefs(tn, Nil, Map.empty, Map.empty) else copy(parents = Nil))((mds1, mds2) =>
           mds2.copy(decls = mds1.decls ++ mds2.decls, defns = mds1.defns ++ mds2.defns))
@@ -521,8 +528,8 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
               val bodyTy = subst(rhs.fold(
                 term => ctx.getMthDefn(prt.name, nme.name)
                   .fold(typeLetRhs(rec, nme.name, term)(thisCtx, raise, targsMap2))(mt =>
-                    subst(mt.toPT, td2.targs.lazyZip(tr.targs).toMap[ST, ST] + (td.thisTv -> td.thisTv)) match {
-                      // Try to wnwrap one layer of prov, which would have been wrapped by the original call to `go`,
+                    subst(mt.bodyPT, td2.targs.lazyZip(tr.targs).toMap) match {
+                      // Try to wnwrap one layer of prov, which would have been wrapped by `MethodType.bodyPT`,
                       // and will otherwise mask the more precise new prov that contains "inherited"
                       case PolymorphicType(level, ProvType(underlying)) =>
                         PolymorphicType(level, underlying)
@@ -534,12 +541,12 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
                   // ^ Note: we need to go to the next level here,
                   //    which is also done automatically by `typeLetRhs` in the case above
               ), reverseRigid2)
-              val mthTy = td2.wrapMethod(bodyTy.level, bodyTy.body, prov) // TODO
+              val mthTy = td2.wrapMethod(bodyTy, prov) // TODO
               if (rhs.isRight || !declared.isDefinedAt(nme.name)) {
                 if (top) thisCtx.addMth(S(td.nme.name), nme.name, mthTy)
                 thisCtx.addMth(N, nme.name, mthTy)
               }
-              nme.name -> MethodType(thisCtx.lvl, S(ProvType(bodyTy.body)(prov)), td2.nme)(prov)
+              nme.name -> mthTy
           }
           MethodDefs(td2.nme, filterTR(tr.expand).map(rec(_)(thisCtx)),
             td2.mthDecls.iterator.map(go).toMap, td2.mthDefs.iterator.map(go).toMap)
@@ -556,7 +563,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
         val rigidtargs = td.targs.map(freshenAbove(ctx.lvl, _, true))
         val targsMap = td.targs.lazyZip(rigidtargs).toMap[SimpleType, SimpleType]
         def ss(mt: MethodType, bmt: MethodType)(implicit prov: TypeProvenance) =
-          constrain(subst(mt.toPT, targsMap).instantiate, subst(bmt.toPT, targsMap).rigidify)
+          constrain(subst(mt.bodyPT, targsMap).instantiate, subst(bmt.bodyPT, targsMap).rigidify)
         def registerImplicit(mn: Str, mthTy: MethodType) = ctx.getMth(N, mn) match {
           // If the currently registered method belongs to one of the base classes of this class,
           // then we don't need to do anything.
@@ -590,16 +597,14 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
           println(s">> Checking subsumption (against inferred type) for inferred type of $mn : $mt")
         }
         declsInherit.foreach { case mn -> mt =>
-          val mthTy = td.wrapMethod(mt)
-          ctx.addMth(S(tn.name), mn, mthTy)
+          ctx.addMth(S(tn.name), mn, mt)
         }
         defnsInherit.foreach { case mn -> mt => 
           println(s">> Checking subsumption for inferred type of $mn : $mt")
           (if (decls.isDefinedAt(mn) && !defns.isDefinedAt(mn)) decls.get(mn) else N).orElse(declsInherit.get(mn))
             .foreach(ss(mt, _)(mt.prov))
-          val mthTy = td.wrapMethod(mt)
           if (!declsInherit.get(mn).exists(decl => decl.single && decl.parents.last === mt.parents.last))
-            ctx.addMth(S(tn.name), mn, mthTy)
+            ctx.addMth(S(tn.name), mn, mt)
         }
         decls.foreach { case mn -> mt =>
           println(s">> Checking subsumption for declared type of $mn : $mt")
@@ -615,9 +620,8 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
               S(defn)
             case (N, N) => N
           }).foreach(ss(mt, _)(mt.prov))
-          val mthTy = td.wrapMethod(mt)
-          ctx.addMth(S(tn.name), mn, mthTy)
-          registerImplicit(mn, mthTy)
+          ctx.addMth(S(tn.name), mn, mt)
+          registerImplicit(mn, mt)
         }
         defns.foreach { case mn -> mt => 
           implicit val prov: TypeProvenance = mt.prov
@@ -633,15 +637,14 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
             val bmt = MethodType(inheritedMt.level, inheritedMt.body, inheritedMt.parents)(inheritedMt.prov)
             ss(mt, bmt)
           })
-          val mthTy = td.wrapMethod(mt)
           if (!decls.isDefinedAt(mn)) {
             // If the class declares that method explicitly,
             //   the declared signature is used so we don't have to do anything
             // If the class does not declare that method explicitly (it could be inherited),
             //   we still want to make the method available using its inferred signature
             //   both for implicit method calls and for explicit ones
-            ctx.addMth(S(tn.name), mn, mthTy)
-            registerImplicit(mn, mthTy)
+            ctx.addMth(S(tn.name), mn, mt)
+            registerImplicit(mn, mt)
           }
           ctx.addMthDefn(tn.name, mn, mt)
         }

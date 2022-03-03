@@ -2,7 +2,7 @@
 // To generate the prelude without printing it in the next test case
 () with { x = add 1 }
 //│ res: () & {x: int -> int}
-//│    = Array { x: [Function (anonymous)] }
+//│    = [ x: [Function (anonymous)] ]
 
 :js
 class Box[T]: { inner: T }
@@ -64,6 +64,7 @@ box2.inner + box2.Get
 def b: Box[string] & { inner: "hello" }
 b = Box "hello"
 //│ b: Box[string] & {inner: "hello"}
+//│  = <missing implementation>
 //│ Box['T .. "hello" | 'T] with {inner: "hello"}
 //│   <:  b:
 //│ Box[string] & {inner: "hello"}
