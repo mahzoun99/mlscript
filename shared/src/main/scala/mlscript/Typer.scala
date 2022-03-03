@@ -630,8 +630,6 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
             case (S(decl), N) => S(decl)
             case (N, N) => N
           }).foreach({ inheritedMt =>
-            println(s">> constrain with inherited method: ${inheritedMt.body}")
-            println(s">> replace `this` with ${td.nme}")
             val bmt = MethodType(inheritedMt.level, inheritedMt.body, inheritedMt.parents)(inheritedMt.prov)
             ss(mt, bmt)
           })
