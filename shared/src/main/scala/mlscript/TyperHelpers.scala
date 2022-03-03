@@ -87,27 +87,6 @@ abstract class TyperHelpers { self: Typer =>
     })
     case _: ObjectTag | _: ExtrType => ts
   }
-
-  def substThisType(ts: SimpleType)(implicit me: TypeProvenance => TypeRef): SimpleType = ts match {
-    case FunctionType(lhs, rhs) => FunctionType(substThisType(lhs), substThisType(rhs))(ts.prov)
-    case RecordType(fields) => RecordType(fields.map { case fn -> ft => fn -> substThisType(ft) })(ts.prov)
-    case TupleType(fields) => TupleType(fields.map { case fn -> ft => fn -> substThisType(ft) })(ts.prov)
-    case ts: ExtrType => ts
-    case ComposedType(pol, lhs, rhs) => ComposedType(pol, substThisType(lhs), substThisType(rhs))(ts.prov)
-    case NegType(negated) => NegType(substThisType(negated))(ts.prov)
-    case Without(base, names) => Without(substThisType(base), names)(ts.prov)
-    case ProvType(underlying) => ProvType(substThisType(underlying))(ts.prov)
-    case WithType(base, rcd) =>
-      val rcd2 = RecordType(rcd.fields.map { case fn -> ft => fn -> substThisType(ft) })(rcd.prov)
-      WithType(substThisType(base), rcd2)(ts.prov)
-    case TypeRef(defn, targs) => TypeRef(defn, targs.map { substThisType(_) })(ts.prov)
-    case _: ClassTag => ts
-    case _: TraitTag => ts
-    case TypeBounds(lb, ub) => TypeBounds(substThisType(lb), substThisType(ub))(ts.prov)
-    case _: TypeVariable => ts
-    case NegVar(tv) => substThisType(tv)
-    case NegTrait(tt) => substThisType(tt)
-  }
   
   def tupleIntersection(fs1: Ls[Opt[Var] -> SimpleType], fs2: Ls[Opt[Var] -> SimpleType]): Ls[Opt[Var] -> SimpleType] = {
     require(fs1.size === fs2.size)

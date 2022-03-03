@@ -632,8 +632,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
           }).foreach({ inheritedMt =>
             println(s">> constrain with inherited method: ${inheritedMt.body}")
             println(s">> replace `this` with ${td.nme}")
-            val body = inheritedMt.body.map { substThisType(_)(TypeRef(td.nme, td.targs)) }
-            val bmt = MethodType(inheritedMt.level, body, inheritedMt.parents)(inheritedMt.prov)
+            val bmt = MethodType(inheritedMt.level, inheritedMt.body, inheritedMt.parents)(inheritedMt.prov)
             ss(mt, bmt)
           })
           val mthTy = td.wrapMethod(mt)
