@@ -2,19 +2,19 @@ class Foo[A, B]: { x: A; y: B }
     method Fun[C]: (A -> B -> C) -> (A -> B -> C)
     method Fun[C, D] (f: C -> D) = f
 //│ Defined class Foo
-//│ Declared Foo.Fun: Foo['A, 'B] -> ('A -> 'B -> 'C) -> 'A -> 'B -> 'C
-//│ Defined Foo.Fun: Foo['A, 'B] -> ('C -> 'D) -> 'C -> 'D
+//│ Declared Foo.Fun: (Foo['A, 'B] & this) -> ('A -> 'B -> 'C) -> 'A -> 'B -> 'C
+//│ Defined Foo.Fun: (Foo['A, 'B] & this) -> ('C -> 'D) -> 'C -> 'D
 
 class Bar: Foo[int, bool]
     method Fun f = f
 //│ Defined class Bar
-//│ Defined Bar.Fun: Bar -> 'a -> 'a
+//│ Defined Bar.Fun: (Bar & this) -> 'a -> 'a
 
 Foo.Fun
 Bar.Fun
-//│ res: Foo['A, 'B] -> ('A -> 'B -> 'C) -> 'A -> 'B -> 'C
+//│ res: (Foo['A, 'B] & this) -> ('A -> 'B -> 'C) -> 'A -> 'B -> 'C
 //│    = undefined
-//│ res: Bar -> 'a -> 'a
+//│ res: (Bar & this) -> 'a -> 'a
 //│    = undefined
 
 f = Foo { x = 1; y = 2 }
@@ -22,17 +22,44 @@ f = Foo { x = 1; y = 2 }
 //│  = Foo { x: 1, y: 2 }
 
 f.(Foo.Fun)
-//│ res: ((1 | 'A) -> (2 | 'B) -> 'C) -> 'A -> 'B -> 'C
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.24: 	f.(Foo.Fun)
+//│ ║        	^^^^^^^^^^^
+//│ ╟── application of type `Foo[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.20: 	f = Foo { x = 1; y = 2 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.24: 	f.(Foo.Fun)
+//│ ╙──      	^
+//│ res: ((1 | 'A) -> (2 | 'B) -> 'C) -> 'A -> 'B -> 'C | error
 //│    = undefined
 
 :re
 Foo.Fun f
-//│ res: ((1 | 'A) -> (2 | 'B) -> 'C) -> 'A -> 'B -> 'C
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.38: 	Foo.Fun f
+//│ ║        	^^^^^^^^^
+//│ ╟── application of type `Foo[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.20: 	f = Foo { x = 1; y = 2 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.38: 	Foo.Fun f
+//│ ╙──      	        ^
+//│ res: ((1 | 'A) -> (2 | 'B) -> 'C) -> 'A -> 'B -> 'C | error
 //│ Runtime error:
 //│   TypeError: (intermediate value).Fun is not a function
 
 f.Fun
-//│ res: ((1 | 'A) -> (2 | 'B) -> 'C) -> 'A -> 'B -> 'C
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.52: 	f.Fun
+//│ ║        	^^^^^
+//│ ╟── application of type `Foo[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.20: 	f = Foo { x = 1; y = 2 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.52: 	f.Fun
+//│ ╙──      	^
+//│ res: ((1 | 'A) -> (2 | 'B) -> 'C) -> 'A -> 'B -> 'C | error
 //│    = [Function: Fun]
 
 // :d
@@ -46,30 +73,84 @@ g = Bar { x = 42; y = true }
 
 g.(Foo.Fun)
 g.(Bar.Fun)
-//│ res: (int -> bool -> 'C) -> int -> bool -> 'C
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.74: 	g.(Foo.Fun)
+//│ ║        	^^^^^^^^^^^
+//│ ╟── application of type `Bar & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.70: 	g = Bar { x = 42; y = true }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.74: 	g.(Foo.Fun)
+//│ ╙──      	^
+//│ res: (int -> bool -> 'C) -> int -> bool -> 'C | error
 //│    = undefined
-//│ res: 'a -> 'a
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.75: 	g.(Bar.Fun)
+//│ ║        	^^^^^^^^^^^
+//│ ╟── application of type `Bar & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.70: 	g = Bar { x = 42; y = true }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.75: 	g.(Bar.Fun)
+//│ ╙──      	^
+//│ res: 'a -> 'a | error
 //│    = undefined
 
 :re
 Foo.Fun g
 Bar.Fun g
-//│ res: (int -> bool -> 'C) -> int -> bool -> 'C
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.100: 	Foo.Fun g
+//│ ║         	^^^^^^^^^
+//│ ╟── application of type `Bar & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.70: 	g = Bar { x = 42; y = true }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.100: 	Foo.Fun g
+//│ ╙──       	        ^
+//│ res: (int -> bool -> 'C) -> int -> bool -> 'C | error
 //│ Runtime error:
 //│   TypeError: (intermediate value).Fun is not a function
-//│ res: 'a -> 'a
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.101: 	Bar.Fun g
+//│ ║         	^^^^^^^^^
+//│ ╟── application of type `Bar & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.70: 	g = Bar { x = 42; y = true }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.101: 	Bar.Fun g
+//│ ╙──       	        ^
+//│ res: 'a -> 'a | error
 //│ Runtime error:
 //│   TypeError: (intermediate value).Fun is not a function
 
 g.Fun
-//│ res: (int -> bool -> 'C) -> int -> bool -> 'C
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.127: 	g.Fun
+//│ ║         	^^^^^
+//│ ╟── application of type `Bar & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.70: 	g = Bar { x = 42; y = true }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.127: 	g.Fun
+//│ ╙──       	^
+//│ res: (int -> bool -> 'C) -> int -> bool -> 'C | error
 //│    = [Function: Fun]
 
 h = Bar { x = 43; y = true }
 h.Fun
 //│ h: Bar & {x: 43, y: true}
 //│  = Bar { x: 43, y: true }
-//│ res: (int -> bool -> 'C) -> int -> bool -> 'C
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.141: 	h.Fun
+//│ ║         	^^^^^
+//│ ╟── application of type `Bar & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.140: 	h = Bar { x = 43; y = true }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.141: 	h.Fun
+//│ ╙──       	^
+//│ res: (int -> bool -> 'C) -> int -> bool -> 'C | error
 //│    = [Function: Fun]
 
 
@@ -80,34 +161,52 @@ class Wrapper[A]: { x: A }
     method Apply[B]: (A -> B) -> Wrapper[B]
     // method Apply f = Wrapper { x = f this.x }
 //│ Defined class Wrapper
-//│ Declared Wrapper.Apply: Wrapper['A] -> ('A -> 'B) -> Wrapper['B]
-//│ Defined Wrapper.Apply: (Wrapper['A] & {x: 'A & 'a}) -> ('a -> ('b & 'A0)) -> (Wrapper['A0] with {x: 'b})
+//│ Declared Wrapper.Apply: (Wrapper['A] & this) -> ('A -> 'B) -> Wrapper['B]
+//│ Defined Wrapper.Apply: (Wrapper['A] & this) -> ('A -> ('a & 'A0)) -> (Wrapper['A0] with {x: 'a})
 
 class IntWrapper: Wrapper[int]
     method Apply f = Wrapper { x = f this.x }
 //│ Defined class IntWrapper
-//│ Defined IntWrapper.Apply: (IntWrapper & {x: int & 'a}) -> ('a -> ('b & 'A)) -> (Wrapper['A] with {x: 'b})
+//│ Defined IntWrapper.Apply: (IntWrapper & this) -> (int -> ('a & 'b)) -> (Wrapper['b] with {x: 'a})
 
 class Psyduck[B]: Wrapper[B]
     method Apply[A]: (B -> A) -> Psyduck[A]
     method Apply f = Psyduck { x = f this.x }
 //│ Defined class Psyduck
-//│ Declared Psyduck.Apply: Psyduck['B] -> ('B -> 'A) -> Psyduck['A]
-//│ Defined Psyduck.Apply: (Psyduck['B] & {x: 'B & 'a}) -> ('a -> ('b & 'B0)) -> (Psyduck['B0] with {x: 'b})
+//│ Declared Psyduck.Apply: (Psyduck['B] & this) -> ('B -> 'A) -> Psyduck['A]
+//│ Defined Psyduck.Apply: (Psyduck['B] & this) -> ('B -> ('a & 'B0)) -> (Psyduck['B0] with {x: 'a})
 
 class WrapperWrapper[A]: Wrapper[Wrapper[A]]
     method Apply2[B]: (A -> B) -> WrapperWrapper[B]
     method Apply2 f = WrapperWrapper { x = this.x.Apply f }
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.181: 	    method Apply2 f = WrapperWrapper { x = this.x.Apply f }
+//│ ║         	                                           ^^^^^^^^^^^^
+//│ ╟── type `Wrapper[?A]` is not an instance of type This
+//│ ║  l.179: 	class WrapperWrapper[A]: Wrapper[Wrapper[A]]
+//│ ║         	                                 ^^^^^^^^^^
+//│ ╟── but it flows into field selection with expected type `this`
+//│ ║  l.181: 	    method Apply2 f = WrapperWrapper { x = this.x.Apply f }
+//│ ╙──       	                                           ^^^^^^
 //│ Defined class WrapperWrapper
-//│ Declared WrapperWrapper.Apply2: (WrapperWrapper['A] with {x: Wrapper['A | 'A0 .. 'A & 'A0]}) -> ('A -> 'B) -> (WrapperWrapper['B] with {x: Wrapper['B]})
-//│ Defined WrapperWrapper.Apply2: (WrapperWrapper['A] with {x: Wrapper['A | 'A0 .. 'A & 'A0]}) -> ('A0 -> 'a) -> (WrapperWrapper['a] with {x: Wrapper['a]})
+//│ Declared WrapperWrapper.Apply2: ((WrapperWrapper['A] with {x: Wrapper['A]}) & this) -> ('A -> 'B) -> (WrapperWrapper['B] with {x: Wrapper['B]})
+//│ Defined WrapperWrapper.Apply2: ((WrapperWrapper['A] with {x: Wrapper['A]}) & this) -> (nothing -> error) -> (WrapperWrapper[error] with {x: error | Wrapper[error]})
 
 WrapperWrapper { x = Psyduck { x = 0 } }
 //│ res: WrapperWrapper['A .. 0 | 'A] with {x: Psyduck['A .. 0 | 'A] with {x: 0}}
 //│    = WrapperWrapper { x: Psyduck { x: 0 } }
 
 res.Apply2 (fun x -> mul x 2)
-//│ res: WrapperWrapper['B .. 'B | int] with {x: Wrapper['B .. 'B | int]}
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.199: 	res.Apply2 (fun x -> mul x 2)
+//│ ║         	^^^^^^^^^^
+//│ ╟── application of type `WrapperWrapper[?A] & {x: ?x}` is not an instance of type This
+//│ ║  l.195: 	WrapperWrapper { x = Psyduck { x = 0 } }
+//│ ║         	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.199: 	res.Apply2 (fun x -> mul x 2)
+//│ ╙──       	^^^
+//│ res: error | (WrapperWrapper['B .. 'B | int] with {x: Wrapper['B .. 'B | int]})
 //│    = WrapperWrapper { x: Psyduck { x: 0 } }
 
 Wrapper
@@ -121,8 +220,8 @@ class Asc[A, B]: { x: A; y: B }
     method Left = { x = this.x; y = this.y } : { x: A }
     method Right2 = this : { y: B }
 //│ Defined class Asc
-//│ Defined Asc.Left: (Asc['A, 'B] & {x: A & 'A, y: B & 'B}) -> {x: 'A}
-//│ Defined Asc.Right2: (Asc['A, 'B] & {x: A & 'A, y: B & 'B}) -> {y: 'B}
+//│ Defined Asc.Left: (Asc['A .. A & 'A, 'B .. B & 'B] & this) -> {x: 'A}
+//│ Defined Asc.Right2: (Asc['A .. A & 'A, 'B .. B & 'B] & this) -> {y: 'B}
 
 
 
@@ -130,12 +229,12 @@ class Asc[A, B]: { x: A; y: B }
 class Simple[A]
     method Get: A
 //│ Defined class Simple
-//│ Declared Simple.Get: Simple['A] -> 'A
+//│ Declared Simple.Get: (Simple['A] & this) -> 'A
 
 class Simple2[A]: { a: A }
     method Get: A
 //│ Defined class Simple2
-//│ Declared Simple2.Get: Simple2['A] -> 'A
+//│ Declared Simple2.Get: (Simple2['A] & this) -> 'A
 
 
 
@@ -144,37 +243,74 @@ class AbstractPair[A, B]: { x: A; y: B }
     method Test: (A -> B -> bool) -> bool
     method Map[C, D]: (A -> C) -> (B -> D) -> AbstractPair[C, D]
 //│ Defined class AbstractPair
-//│ Declared AbstractPair.Test: AbstractPair['A, 'B] -> ('A -> 'B -> bool) -> bool
-//│ Declared AbstractPair.Map: AbstractPair['A, 'B] -> ('A -> 'C) -> ('B -> 'D) -> AbstractPair['C, 'D]
+//│ Declared AbstractPair.Test: (AbstractPair['A, 'B] & this) -> ('A -> 'B -> bool) -> bool
+//│ Declared AbstractPair.Map: (AbstractPair['A, 'B] & this) -> ('A -> 'C) -> ('B -> 'D) -> AbstractPair['C, 'D]
 
 class Pair[A, B]: AbstractPair[A, B]
     method Test(f: A -> B -> bool) = f this.x this.y
     method Map fx fy = Pair { x = fx this.x; y = fy this.y }
+//│ ╔══[ERROR] Type mismatch in method definition:
+//│ ║  l.251: 	    method Map fx fy = Pair { x = fx this.x; y = fy this.y }
+//│ ║         	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── expression of type `C & ~A & ~_α820` does not match type `_α830 | _α821 | A`
+//│ ╟── Note: constraint arises from field selection:
+//│ ║  l.250: 	    method Test(f: A -> B -> bool) = f this.x this.y
+//│ ╙──       	                                       ^^^^^^
+//│ ╔══[ERROR] Type mismatch in method definition:
+//│ ║  l.251: 	    method Map fx fy = Pair { x = fx this.x; y = fy this.y }
+//│ ║         	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── expression of type `C & ~A & ~_α820` does not match type `_α821 | A`
+//│ ╟── Note: constraint arises from field selection:
+//│ ║  l.250: 	    method Test(f: A -> B -> bool) = f this.x this.y
+//│ ╙──       	                                       ^^^^^^
+//│ ╔══[ERROR] Type mismatch in method definition:
+//│ ║  l.251: 	    method Map fx fy = Pair { x = fx this.x; y = fy this.y }
+//│ ║         	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── expression of type `D & ~B & ~_α824` does not match type `_α833 | _α825 | B`
+//│ ╟── Note: constraint arises from field selection:
+//│ ║  l.250: 	    method Test(f: A -> B -> bool) = f this.x this.y
+//│ ╙──       	                                              ^^^^^^
+//│ ╔══[ERROR] Type mismatch in method definition:
+//│ ║  l.251: 	    method Map fx fy = Pair { x = fx this.x; y = fy this.y }
+//│ ║         	           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── expression of type `D & ~B & ~_α824` does not match type `_α825 | B`
+//│ ╟── Note: constraint arises from field selection:
+//│ ║  l.250: 	    method Test(f: A -> B -> bool) = f this.x this.y
+//│ ╙──       	                                              ^^^^^^
 //│ Defined class Pair
-//│ Defined Pair.Test: (Pair['A, 'B] & {x: A & 'A, y: B & 'B}) -> ('A -> 'B -> bool) -> bool
-//│ Defined Pair.Map: (Pair['A, 'B] & {x: A & 'A & 'a, y: B & 'B & 'b}) -> ('a -> ('c & 'A0)) -> ('b -> ('d & 'B0)) -> (Pair['A0, 'B0] with {x: 'c, y: 'd})
+//│ Defined Pair.Test: (Pair['A .. A & 'A, 'B .. B & 'B] & this) -> ('A -> 'B -> bool) -> bool
+//│ Defined Pair.Map: (Pair['A .. A & 'A, 'B .. B & 'B] & this) -> ('A -> (A & 'A & 'a & 'b)) -> ('B -> (B & 'B & 'c & 'd)) -> (Pair[A & 'A & 'b .. 'b, B & 'B & 'd .. 'd] with {x: 'a, y: 'c})
 
 class True[A, B]: Pair[A, B]
     method Test f = true
     method True = this.Test (fun x -> error)
 //│ Defined class True
-//│ Defined True.Test: (true & {x: 'A, y: 'B}) -> anything -> true
-//│ Defined True.True: (true & {x: 'A, y: 'B}) -> true
+//│ Defined True.Test: (true & {x: 'A, y: 'B} & this) -> anything -> true
+//│ Defined True.True: (true & {x: 'A, y: 'B} & this) -> true
 
 class True2[A, B]: Pair[A, B]
     method Test: anything -> bool
     method True = this.Test (fun x -> error)
     method Test f = true
 //│ Defined class True2
-//│ Declared True2.Test: True2['A, 'B] -> anything -> bool
-//│ Defined True2.True: True2['A, 'B] -> bool
-//│ Defined True2.Test: True2['A, 'B] -> anything -> true
+//│ Declared True2.Test: (True2['A, 'B] & this) -> anything -> bool
+//│ Defined True2.True: (True2['A, 'B] & this) -> bool
+//│ Defined True2.Test: (True2['A, 'B] & this) -> anything -> true
 
 p = Pair { x = 42; y = true }
 fx = fun x -> mul x 2
 fy = fun x -> not x
 ft = fun x -> fun y -> if (y) then gt x 0 else y
-//│ p: Pair['A .. 42 | 'A, 'B .. 'B | true] with {x: 42, y: true}
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.300: 	p = Pair { x = 42; y = true }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── reference of type `true` is not an instance of type B
+//│ ║  l.300: 	p = Pair { x = 42; y = true }
+//│ ║         	                       ^^^^
+//│ ╟── Note: constraint arises from field selection:
+//│ ║  l.250: 	    method Test(f: A -> B -> bool) = f this.x this.y
+//│ ╙──       	                                              ^^^^^^
+//│ p: error | (Pair[A & 'A .. 42 | 'A, B & 'B .. 'B | true] with {x: 42, y: true})
 //│  = Pair { x: 42, y: true }
 //│ fx: int -> int
 //│   = [Function: fx]
@@ -186,25 +322,79 @@ ft = fun x -> fun y -> if (y) then gt x 0 else y
 p.Map fx fy
 p.Test ft
 (p.Map fx fy).Test ft
-//│ res: AbstractPair['C .. 'C | int, 'D .. 'D | bool]
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.322: 	p.Map fx fy
+//│ ║         	^^^^^
+//│ ╟── application of type `Pair[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.300: 	p = Pair { x = 42; y = true }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.322: 	p.Map fx fy
+//│ ╙──       	^
+//│ res: AbstractPair['C .. 'C | int, 'D .. 'D | bool] | error
 //│    = Pair { x: 84, y: false }
-//│ res: bool
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.323: 	p.Test ft
+//│ ║         	^^^^^^
+//│ ╟── application of type `Pair[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.300: 	p = Pair { x = 42; y = true }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.323: 	p.Test ft
+//│ ╙──       	^
+//│ res: bool | error
 //│    = true
-//│ res: bool
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.324: 	(p.Map fx fy).Test ft
+//│ ║         	 ^^^^^
+//│ ╟── application of type `Pair[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.300: 	p = Pair { x = 42; y = true }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.324: 	(p.Map fx fy).Test ft
+//│ ╙──       	 ^
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.324: 	(p.Map fx fy).Test ft
+//│ ║         	^^^^^^^^^^^^^^^^^^
+//│ ╟── type `AbstractPair[?C, ?D]` is not an instance of type This
+//│ ║  l.244: 	    method Map[C, D]: (A -> C) -> (B -> D) -> AbstractPair[C, D]
+//│ ║         	                                              ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into application with expected type `this`
+//│ ║  l.324: 	(p.Map fx fy).Test ft
+//│ ╙──       	 ^^^^^^^^^^^
+//│ res: bool | error
 //│    = false
 
 t = True { x = "foo"; y = false }
 t.(True.True)
 //│ t: true & {x: "foo", y: false}
 //│  = True { x: 'foo', y: false }
-//│ res: true
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.369: 	t.(True.True)
+//│ ║         	^^^^^^^^^^^^^
+//│ ╟── application of type `true & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.368: 	t = True { x = "foo"; y = false }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.369: 	t.(True.True)
+//│ ╙──       	^
+//│ res: error | true
 //│    = undefined
 
 t = True2 { x = "bar"; y = false }
 t.(True2.True)
 //│ t: True2['A .. "bar" | 'A, 'B .. 'B | false] with {x: "bar", y: false}
 //│  = True2 { x: 'bar', y: false }
-//│ res: bool
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.385: 	t.(True2.True)
+//│ ║         	^^^^^^^^^^^^^^
+//│ ╟── application of type `True2[?A, ?B] & {x: ?x, y: ?y}` is not an instance of type This
+//│ ║  l.384: 	t = True2 { x = "bar"; y = false }
+//│ ║         	    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.385: 	t.(True2.True)
+//│ ╙──       	^
+//│ res: bool | error
 //│    = undefined
 
 
@@ -215,11 +405,11 @@ trait Trait1A[B]
 class Class1B: Class1A["a" | "b"] & Trait1A["b" | "c"]
     method MtdA = "b"
 //│ Defined class Class1A
-//│ Declared Class1A.MtdA: Class1A['A] -> 'A
+//│ Declared Class1A.MtdA: (Class1A['A] & this) -> 'A
 //│ Defined trait Trait1A
-//│ Declared Trait1A.MtdA: trait1A -> 'B
+//│ Declared Trait1A.MtdA: (this & trait1A) -> 'B
 //│ Defined class Class1B
-//│ Defined Class1B.MtdA: (Class1B & trait1A) -> "b"
+//│ Defined Class1B.MtdA: (Class1B & this & trait1A) -> "b"
 
 
 trait Trait2A[A]
@@ -231,13 +421,13 @@ class Class2C: Class2B[int, bool]
     method MtdA = 42
     method MtdB = true
 //│ Defined trait Trait2A
-//│ Declared Trait2A.MtdB: trait2A -> 'A
+//│ Declared Trait2A.MtdB: (this & trait2A) -> 'A
 //│ Defined class Class2B
-//│ Declared Class2B.MtdA: (Class2B['A, 'B] & trait2A) -> 'A
-//│ Declared Class2B.MtdB: (Class2B['A, 'B] & trait2A) -> 'B
+//│ Declared Class2B.MtdA: (Class2B['A, 'B] & this & trait2A) -> 'A
+//│ Declared Class2B.MtdB: (Class2B['A, 'B] & this & trait2A) -> 'B
 //│ Defined class Class2C
-//│ Defined Class2C.MtdA: (Class2C & trait2A) -> 42
-//│ Defined Class2C.MtdB: (Class2C & trait2A) -> true
+//│ Defined Class2C.MtdA: (Class2C & this & trait2A) -> 42
+//│ Defined Class2C.MtdB: (Class2C & this & trait2A) -> true
 
 
 :e
@@ -245,23 +435,23 @@ class Class3C: Class2C
     method MtdA = 42
     method MtdB = 42
 //│ ╔══[ERROR] Type mismatch in method definition:
-//│ ║  l.246: 	    method MtdB = 42
+//│ ║  l.436: 	    method MtdB = 42
 //│ ║         	           ^^^^^^^^^
 //│ ╟── integer literal of type `42` does not match type `bool`
-//│ ║  l.246: 	    method MtdB = 42
+//│ ║  l.436: 	    method MtdB = 42
 //│ ║         	                  ^^
 //│ ╟── but it flows into method definition with expected type `bool`
-//│ ║  l.246: 	    method MtdB = 42
+//│ ║  l.436: 	    method MtdB = 42
 //│ ║         	           ^^^^^^^^^
 //│ ╟── Note: constraint arises from type reference:
-//│ ║  l.230: 	class Class2C: Class2B[int, bool]
+//│ ║  l.420: 	class Class2C: Class2B[int, bool]
 //│ ║         	                            ^^^^
 //│ ╟── from inherited method declaration:
-//│ ║  l.229: 	    method MtdB: B
+//│ ║  l.419: 	    method MtdB: B
 //│ ╙──       	           ^^^^^^^
 //│ Defined class Class3C
-//│ Defined Class3C.MtdA: (Class3C & trait2A) -> 42
-//│ Defined Class3C.MtdB: (Class3C & trait2A) -> 42
+//│ Defined Class3C.MtdA: (Class3C & this & trait2A) -> 42
+//│ Defined Class3C.MtdB: (Class3C & this & trait2A) -> 42
 
 type Id[T] = T
 class Test1[A]: { x: A }
@@ -270,21 +460,21 @@ class Test2[B]: Test1[Id[B]] & { x: B }
     method F = this.x
 //│ Defined type alias Id
 //│ Defined class Test1
-//│ Declared Test1.F: Test1['A] -> 'A
+//│ Declared Test1.F: (Test1['A] & this) -> 'A
 //│ Defined class Test2
-//│ Defined Test2.F: (Test2['B] with {x: 'B & 'a}) -> 'a
+//│ Defined Test2.F: (Test2['B] & this) -> 'B
 
 
 class Test3A: Test1['a -> 'a]
 Test3A.F
 //│ Defined class Test3A
-//│ res: ((Test3A with {x: 'a -> 'a},) & {_1: Test3A with {x: (('a,) | ('a | 'a0,)) -> ('a & 'a0)}}) -> 'a1 -> 'a1
+//│ res: (((Test3A with {x: 'a -> 'a}) & this,) & {_1: (Test3A with {x: (('a,) | ('a | 'a0,)) -> ('a & 'a0)}) & this}) -> 'a1 -> 'a1
 //│    = undefined
 
 class Test3B: Test1['a -> 'a] & { x: 'a }
 Test3B.F
 //│ Defined class Test3B
-//│ res: ((Test3B with {x: 'a -> 'a & 'a},) & {_1: Test3B with {x: (('a,) | ('a | 'a0,)) -> ('a & 'a0) & 'a & 'a0}}) -> 'a1 -> 'a1
+//│ res: (((Test3B with {x: 'a -> 'a & 'a}) & this,) & {_1: (Test3B with {x: (('a,) | ('a | 'a0,)) -> ('a & 'a0) & 'a & 'a0}) & this}) -> 'a1 -> 'a1
 //│    = undefined
 
 
@@ -293,21 +483,21 @@ Test3B.F
 class Test4A[A]: { x: A }
     method Mth4A[A]: A
 //│ ╔══[WARNING] Method type parameter A
-//│ ║  l.293: 	class Test4A[A]: { x: A }
+//│ ║  l.483: 	class Test4A[A]: { x: A }
 //│ ║         	             ^
 //│ ╟── shadows class type parameter A
-//│ ║  l.294: 	    method Mth4A[A]: A
+//│ ║  l.484: 	    method Mth4A[A]: A
 //│ ╙──       	                 ^
 //│ Defined class Test4A
-//│ Declared Test4A.Mth4A: Test4A['A] -> nothing
+//│ Declared Test4A.Mth4A: (Test4A['A] & this) -> nothing
 
 
 class Test[A]: { x: A }
     method Mth[B]: (A -> B) -> B
     method Mth[B] (f: A -> B) = f this.x
 //│ Defined class Test
-//│ Declared Test.Mth: (Test['A] & {x: A & 'A}) -> ('A -> 'B) -> 'B
-//│ Defined Test.Mth: (Test['A] & {x: A & 'A}) -> ('A -> 'B) -> 'B
+//│ Declared Test.Mth: (Test['A .. A & 'A] & this) -> ('A -> 'B) -> 'B
+//│ Defined Test.Mth: (Test['A .. A & 'A] & this) -> ('A -> 'B) -> 'B
 
 
 
@@ -317,13 +507,19 @@ trait E
   method G: int
 class H: D & E
 //│ Defined trait D
-//│ Defined D.G: d -> 1
+//│ Defined D.G: (d & this) -> 1
 //│ Defined trait E
-//│ Declared E.G: e -> int
+//│ Declared E.G: (e & this) -> int
 //│ Defined class H
 
 ((H{}): D).(D.G)
-//│ res: 1
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.515: 	((H{}): D).(D.G)
+//│ ║         	^^^^^^^^^^^^^^^^
+//│ ╟── type `d` is not an instance of type This
+//│ ║  l.515: 	((H{}): D).(D.G)
+//│ ╙──       	        ^
+//│ res: 1 | error
 //│    = undefined
 
 
@@ -331,30 +527,30 @@ class H: D & E
 class Fee
     method F: 1 | 2
 //│ Defined class Fee
-//│ Declared Fee.F: Fee -> (1 | 2)
+//│ Declared Fee.F: (Fee & this) -> (1 | 2)
 
 trait Fee2
     method F: 2 | 3
 //│ Defined trait Fee2
-//│ Declared Fee2.F: fee2 -> (2 | 3)
+//│ Declared Fee2.F: (fee2 & this) -> (2 | 3)
 
 class Ber: Fee & Fee2
 //│ Defined class Ber
 
 Ber.F
-//│ res: (Ber & fee2) -> 2
+//│ res: (Ber & fee2 & this) -> 2
 //│    = undefined
 
 :e
 Ber
 //│ ╔══[ERROR] Instantiation of an abstract type is forbidden
-//│ ║  l.349: 	Ber
+//│ ║  l.545: 	Ber
 //│ ║         	^^^
 //│ ╟── Note that class Ber is abstract:
-//│ ║  l.341: 	class Ber: Fee & Fee2
+//│ ║  l.537: 	class Ber: Fee & Fee2
 //│ ║         	      ^^^^^^^^^^^^^^^
 //│ ╟── Hint: method F is abstract
-//│ ║  l.341: 	class Ber: Fee & Fee2
+//│ ║  l.537: 	class Ber: Fee & Fee2
 //│ ╙──       	      ^^^^^^^^^^^^^^^
 //│ res: error
 //│    = [Function: res]
@@ -365,25 +561,25 @@ Ber
 class Test5A[A]: { a: A }
     method Mth5A[B]: (A -> B) -> B
 //│ Defined class Test5A
-//│ Declared Test5A.Mth5A: Test5A['A] -> ('A -> 'B) -> 'B
+//│ Declared Test5A.Mth5A: (Test5A['A] & this) -> ('A -> 'B) -> 'B
 
 
 trait Test5B: { tag: int }
     method Mth5B = this.tag
 //│ Defined trait Test5B
-//│ Defined Test5B.Mth5B: ({tag: int & 'a} & test5B) -> 'a
+//│ Defined Test5B.Mth5B: ({tag: int} & test5B & this) -> int
 
 
 class Test5C[A]: Test5A[A] & Test5B
     method Mth5A f = case this.Mth5B of { 0 -> f this.a | _ -> f this.a }
 //│ Defined class Test5C
-//│ Defined Test5C.Mth5A: (Test5C['A] & {a: 'A & 'a, tag: 0 | int & ~0} & test5B) -> ('a -> 'b) -> 'b
+//│ Defined Test5C.Mth5A: (Test5C['A] & test5B & this) -> ('A -> 'a) -> 'a
 
 
 class Test5D: Test5A[int] & Test5B
     method Mth5A f = case this.Mth5B of { 0 -> f this.a | _ -> f this.Mth5B }
 //│ Defined class Test5D
-//│ Defined Test5D.Mth5A: (Test5D & {a: int & 'a, tag: 0 & 'a | int & 'a & ~0} & test5B) -> ('a -> 'b) -> 'b
+//│ Defined Test5D.Mth5A: (Test5D & test5B & this) -> (int -> 'a) -> 'a
 
 
 
@@ -391,12 +587,30 @@ class Test5D: Test5A[int] & Test5B
 class Test6A: { a: int }
     method Add (that: Test6A) = Test6A { a = this.a + that.a }
 //│ Defined class Test6A
-//│ Defined Test6A.Add: Test6A -> Test6A -> Test6A
+//│ Defined Test6A.Add: (Test6A & this) -> Test6A -> Test6A
 
 class Test6B: { a: Test6A; b: Test6A }
     method Add (that: Test6B) = Test6B { a = this.a.(Test6A.Add) that.a; b = this.b.(Test6A.Add) that.b }
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.593: 	    method Add (that: Test6B) = Test6B { a = this.a.(Test6A.Add) that.a; b = this.b.(Test6A.Add) that.b }
+//│ ║         	                                             ^^^^^^^^^^^^^^^^^^^
+//│ ╟── type `Test6A` is not an instance of type This
+//│ ║  l.592: 	class Test6B: { a: Test6A; b: Test6A }
+//│ ║         	                   ^^^^^^
+//│ ╟── but it flows into field selection with expected type `this`
+//│ ║  l.593: 	    method Add (that: Test6B) = Test6B { a = this.a.(Test6A.Add) that.a; b = this.b.(Test6A.Add) that.b }
+//│ ╙──       	                                             ^^^^^^
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.593: 	    method Add (that: Test6B) = Test6B { a = this.a.(Test6A.Add) that.a; b = this.b.(Test6A.Add) that.b }
+//│ ║         	                                                                             ^^^^^^^^^^^^^^^^^^^
+//│ ╟── type `Test6A` is not an instance of type This
+//│ ║  l.592: 	class Test6B: { a: Test6A; b: Test6A }
+//│ ║         	                              ^^^^^^
+//│ ╟── but it flows into field selection with expected type `this`
+//│ ║  l.593: 	    method Add (that: Test6B) = Test6B { a = this.a.(Test6A.Add) that.a; b = this.b.(Test6A.Add) that.b }
+//│ ╙──       	                                                                             ^^^^^^
 //│ Defined class Test6B
-//│ Defined Test6B.Add: (Test6B with {a: Test6A, b: Test6A}) -> (Test6B with {a: Test6A, b: Test6A}) -> (Test6B with {a: Test6A, b: Test6A})
+//│ Defined Test6B.Add: ((Test6B with {a: Test6A, b: Test6A}) & this) -> (Test6B with {a: Test6A, b: Test6A}) -> (Test6B with {a: error | Test6A, b: error | Test6A})
 
 class Test6C: Test6B
 //│ Defined class Test6C
@@ -408,15 +622,15 @@ trait Test7A
     method Mth7A: int
     method Mth7A = 0
 //│ Defined trait Test7A
-//│ Declared Test7A.Mth7A: test7A -> int
-//│ Defined Test7A.Mth7A: test7A -> 0
+//│ Declared Test7A.Mth7A: (test7A & this) -> int
+//│ Defined Test7A.Mth7A: (test7A & this) -> 0
 
 trait Test7B
     method Mth7A: int
 //│ Defined trait Test7B
-//│ Declared Test7B.Mth7A: test7B -> int
+//│ Declared Test7B.Mth7A: (test7B & this) -> int
 
 class Test7C: Test7A & Test7B
     method Mth7A = 42
 //│ Defined class Test7C
-//│ Defined Test7C.Mth7A: (Test7C & test7A & test7B) -> 42
+//│ Defined Test7C.Mth7A: (Test7C & test7A & test7B & this) -> 42

@@ -3,18 +3,30 @@
 class A
   method Foo: int -> this
 //│ Defined class A
-//│ Declared A.Foo: (A & 'a) -> int -> 'a
+//│ Declared A.Foo: (A & this) -> int -> (A & this)
 
 class B: A
   method Foo n = this
 //│ Defined class B
-//│ Defined B.Foo: (B & 'a) -> anything -> 'a
+//│ Defined B.Foo: (B & this) -> anything -> (B & this)
 
 a = B{}
 //│ a: B
 
 a.Foo 1 // : B
-//│ res: B
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.16: 	a.Foo 1 // : B
+//│ ║        	^^^^^
+//│ ╟── application of type `B` is not an instance of type This
+//│ ║  l.13: 	a = B{}
+//│ ║        	    ^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.16: 	a.Foo 1 // : B
+//│ ║        	^
+//│ ╟── Note: class B is defined at: 
+//│ ║  l.8: 	class B: A
+//│ ╙──     	      ^
+//│ res: A & this | error
 
 def b: A
 b = a
@@ -23,9 +35,18 @@ b.Foo 1 // : A
 //│ B
 //│   <:  b:
 //│ A
-//│ res: A
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.33: 	b.Foo 1 // : A
+//│ ║        	^^^^^
+//│ ╟── type `A` is not an instance of type This
+//│ ║  l.31: 	def b: A
+//│ ║        	       ^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.33: 	b.Foo 1 // : A
+//│ ╙──      	^
+//│ res: A & this | error
 
 class Box[T]: { inner: T }
   method Get = this.inner // Used to be Box.Get: Box['T] -> 'T
 //│ Defined class Box
-//│ Defined Box.Get: (Box['T] & {inner: 'T & 'a}) -> 'a
+//│ Defined Box.Get: (Box['T] & this) -> 'T

@@ -47,9 +47,16 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool) extend
     //     mt.copy(parents = nme :: Nil)
 
     val thisTyBase: TypeRef = TypeRef(nme, targs)(noProv)
-    val thisTv: TypeVariable = freshVar(noProv)(1)
-    thisTv.upperBounds ::= thisTyBase
-    def thisTy(implicit prov: TypeProvenance): TypeVariable = thisTv
+    val thisTv: ST =
+      // freshVar(noProv)(1)
+      // freshenAbove(0, freshVar(noProv)(1).tap(_.upperBounds ::= thisTyBase), true)(1)
+      // freshenAbove(0, freshVar(noProv)(1).tap(_.lowerBounds ::= thisTyBase), true)(1)
+      ComposedType(false,
+        TraitTag(Var("this"))(noProv), // Rigid type variable for `this`
+        thisTyBase,
+      )(noProv)
+    // thisTv.upperBounds ::= thisTyBase
+    def thisTy(implicit prov: TypeProvenance): ST = thisTv
     def wrapMethod(pt: PolymorphicType, prov: TypeProvenance): MethodType =
       MethodType(pt.level, S((thisTy(prov), pt.body)), nme)(prov)
   }

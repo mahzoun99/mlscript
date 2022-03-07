@@ -93,8 +93,8 @@ class Bar
 //│ ║  l.78: 	    method Map[B]: B -> B
 //│ ╙──      	               ^
 //│ Defined class Bar
-//│ Declared Bar.Map: Bar -> 'B -> 'B
-//│ Defined Bar.Map: Bar -> (1 -> 'a) -> 'a
+//│ Declared Bar.Map: (Bar & this) -> 'B -> 'B
+//│ Defined Bar.Map: (Bar & this) -> (1 -> 'a) -> 'a
 
 
 def boom: anything

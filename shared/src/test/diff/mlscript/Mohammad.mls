@@ -11,7 +11,7 @@ test (fun k -> (k true, k false))
 class Class: {x : int}
   method Test = 12
 //│ Defined class Class
-//│ Defined Class.Test: Class -> 12
+//│ Defined Class.Test: (Class & this) -> 12
 
 c = Class{x = 1}
 //│ c: Class & {x: 1}
@@ -43,7 +43,7 @@ useCls (c with { x = 2 })
 trait T
   method Test2 = 1
 //│ Defined trait T
-//│ Defined T.Test2: t -> 1
+//│ Defined T.Test2: (t & this) -> 1
 //│ // End of generated code
 
 :js

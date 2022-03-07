@@ -169,9 +169,9 @@ trait Lol
 class Hey
   method Foo = "oops"
 //│ Defined trait Lol
-//│ Defined Lol.Foo: lol -> 1
+//│ Defined Lol.Foo: (lol & this) -> 1
 //│ Defined class Hey
-//│ Defined Hey.Foo: Hey -> "oops"
+//│ Defined Hey.Foo: (Hey & this) -> "oops"
 
 :e
 class H: Lol & Hey
@@ -204,10 +204,34 @@ e
 //│    = [Function: e]
 
 l.(Lol.Foo)
-//│ res: 1
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.206: 	l.(Lol.Foo)
+//│ ║         	^^^^^^^^^^^
+//│ ╟── application of type `Hey` does not match type `this | ~lol`
+//│ ║  l.192: 	h = Hey{}
+//│ ║         	    ^^^^^
+//│ ╟── but it flows into reference with expected type `this | ~lol`
+//│ ║  l.206: 	l.(Lol.Foo)
+//│ ║         	^
+//│ ╟── Note: class Hey is defined at: 
+//│ ║  l.169: 	class Hey
+//│ ╙──       	      ^^^
+//│ res: 1 | error
 //│    = undefined
 
 l.(Hey.Foo)
-//│ res: "oops"
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.222: 	l.(Hey.Foo)
+//│ ║         	^^^^^^^^^^^
+//│ ╟── application of type `Hey` does not match type `this | ~lol`
+//│ ║  l.192: 	h = Hey{}
+//│ ║         	    ^^^^^
+//│ ╟── but it flows into reference with expected type `this | ~lol`
+//│ ║  l.222: 	l.(Hey.Foo)
+//│ ║         	^
+//│ ╟── Note: class Hey is defined at: 
+//│ ║  l.169: 	class Hey
+//│ ╙──       	      ^^^
+//│ res: "oops" | error
 //│    = undefined
 

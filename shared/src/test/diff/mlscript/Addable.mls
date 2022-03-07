@@ -2,17 +2,17 @@
 class Addable[A]
   method Add: A -> A
 //│ Defined class Addable
-//│ Declared Addable.Add: Addable['A] -> 'A -> 'A
+//│ Declared Addable.Add: (Addable['A] & this) -> 'A -> 'A
 
 class Number: Addable[Number] & { val: int }
   method Add that = Number { val = this.val + that.val }
 //│ Defined class Number
-//│ Defined Number.Add: ('a & number & {val: int}) -> {val: int} -> (number & {val: int})
+//│ Defined Number.Add: (number & {val: int} & this) -> {val: int} -> (number & {val: int})
 
 class Str: Addable[Str] & { val: string }
   method Add that = Str { val = concat this.val that.val }
 //│ Defined class Str
-//│ Defined Str.Add: ('a & Str) -> {val: string} -> Str
+//│ Defined Str.Add: (Str & this) -> {val: string} -> Str
 
 n = Number { val = 1 }
 //│ n: number & {val: 1}
@@ -20,16 +20,37 @@ n = Number { val = 1 }
 
 // TODO why not simplified?
 n.Add n
-//│ res: 'a | number & {val: int}
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.22: 	n.Add n
+//│ ║        	^^^^^
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.22: 	n.Add n
+//│ ╙──      	^
+//│ res: error | number & {val: int}
 //│    = Number { val: 2 }
 
 
 def addTwo a0 a1 = a0.Add a1
-//│ addTwo: Addable['A] -> 'A -> 'A
+//│ addTwo: (Addable['A] & this) -> 'A -> 'A
 //│       = [Function: addTwo]
 
 addTwo n n
-//│ res: 'a | number & {val: int}
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.40: 	addTwo n n
+//│ ║        	^^^^^^^^
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.40: 	addTwo n n
+//│ ║        	       ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.36: 	def addTwo a0 a1 = a0.Add a1
+//│ ╙──      	                   ^^
+//│ res: error | number & {val: int}
 //│    = Number { val: 2 }
 
 s = Str { val = "hey" }
@@ -38,35 +59,92 @@ s = Str { val = "hey" }
 
 // TODO why not simplified?
 s.Add s
-//│ res: 'a | Str
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.61: 	s.Add s
+//│ ║        	^^^^^
+//│ ╟── application of type `Str & {val: ?val}` is not an instance of type This
+//│ ║  l.56: 	s = Str { val = "hey" }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.61: 	s.Add s
+//│ ╙──      	^
+//│ res: error | Str
 //│    = Str { val: 'heyhey' }
 
 addTwo s s
-//│ res: 'a | Str
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.74: 	addTwo s s
+//│ ║        	^^^^^^^^
+//│ ╟── application of type `Str & {val: ?val}` is not an instance of type This
+//│ ║  l.56: 	s = Str { val = "hey" }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.74: 	addTwo s s
+//│ ║        	       ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.36: 	def addTwo a0 a1 = a0.Add a1
+//│ ╙──      	                   ^^
+//│ res: error | Str
 //│    = Str { val: 'heyhey' }
 
 
 
 def addSame a = a.Add a
-//│ addSame: (Addable['A] & 'A) -> 'A
+//│ addSame: (Addable['A] & this & 'A) -> 'A
 //│        = [Function: addSame]
 
 addSame n
-//│ res: 'a | number & {val: int}
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.96: 	addSame n
+//│ ║        	^^^^^^^^^
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.96: 	addSame n
+//│ ║        	        ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.92: 	def addSame a = a.Add a
+//│ ╙──      	                ^
+//│ res: error | number & {val: int}
 //│    = Number { val: 2 }
 
 
 rec def addNTimes a n =
   if n <= 1 then a else a.Add (addNTimes a (n - 1))
-//│ addNTimes: (Addable['A] & 'A) -> int -> 'A
+//│ addNTimes: (Addable['A] & this & 'A) -> int -> 'A
 //│          = [Function: addNTimes]
 
 addNTimes n 12
-//│ res: 'a | number & {val: int}
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.118: 	addNTimes n 12
+//│ ║         	^^^^^^^^^^^
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.118: 	addNTimes n 12
+//│ ║         	          ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.114: 	  if n <= 1 then a else a.Add (addNTimes a (n - 1))
+//│ ╙──       	                        ^
+//│ res: error | number & {val: int}
 //│    = Number { val: 12 }
 
 addNTimes s 5
-//│ res: 'a | Str
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.134: 	addNTimes s 5
+//│ ║         	^^^^^^^^^^^
+//│ ╟── application of type `Str & {val: ?val}` is not an instance of type This
+//│ ║  l.56: 	s = Str { val = "hey" }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.134: 	addNTimes s 5
+//│ ║         	          ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.114: 	  if n <= 1 then a else a.Add (addNTimes a (n - 1))
+//│ ╙──       	                        ^
+//│ res: error | Str
 //│    = Str { val: 'heyheyheyheyhey' }
 
 
@@ -82,39 +160,52 @@ addNTimes s 5
 rec def addNTimes a n =
   if n < 0 then 0 else a.Add (addNTimes a (n - 1))
 addNTimes n 12
-//│ addNTimes: Addable[0 | 'A .. 'A] -> int -> (0 | 'A)
+//│ addNTimes: (Addable[0 | 'A .. 'A] & this) -> int -> (0 | 'A)
 //│ ╔══[ERROR] Type mismatch in application:
 //│ ║  l.+3: 	addNTimes n 12
 //│ ║        	^^^^^^^^^^^
-//│ ╟── integer literal of type `0` is not an instance of type Addable
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.+3: 	addNTimes n 12
+//│ ║        	          ^
+//│ ╟── Note: constraint arises from reference:
 //│ ║  l.+2: 	  if n < 0 then 0 else a.Add (addNTimes a (n - 1))
-//│ ║        	                ^
-//│ ╟── Note: constraint arises from applied type reference:
-//│ ║  l.7: 	class Number: Addable[Number] & { val: int }
-//│ ║       	              ^^^^^^^^^^^^^^^
-//│ ╟── from type reference:
-//│ ║  l.7: 	class Number: Addable[Number] & { val: int }
-//│ ╙──     	                      ^^^^^^
-//│ res: 0 | error | number & {val: int}
+//│ ╙──      	                       ^
+//│ res: error
 
 rec def addNTimes a n =
   if n <= 0 then 0 else a.Add addNTimes a (n - 1)
 addNTimes n 12
-//│ addNTimes: ('a & (Addable['a -> int -> (0 | 'b) | 'A .. 'c -> int -> 'b & 'A] & 'c,)) -> int -> (0 | 'b)
+//│ addNTimes: ('a & (Addable['a -> int -> (0 | 'b) | 'A .. 'c -> int -> 'b & 'A] & this & 'c,)) -> int -> (0 | 'b)
 //│ ╔══[ERROR] Type mismatch in application:
 //│ ║  l.+3: 	addNTimes n 12
 //│ ║        	^^^^^^^^^^^
-//│ ╟── function of type `?a -> ?b -> ?c` does not match type `number`
-//│ ║  l.+1: 	rec def addNTimes a n =
-//│ ║        	                  ^^^^^
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.+3: 	addNTimes n 12
+//│ ║        	          ^
+//│ ╟── Note: constraint arises from reference:
 //│ ║  l.+2: 	  if n <= 0 then 0 else a.Add addNTimes a (n - 1)
-//│ ║        	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-//│ ╟── Note: constraint arises from type reference:
-//│ ║  l.7: 	class Number: Addable[Number] & { val: int }
-//│ ╙──     	                      ^^^^^^
+//│ ╙──      	                        ^
 //│ res: error
 
 addSame n n
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.+1: 	addSame n n
+//│ ║        	^^^^^^^^^
+//│ ╟── application of type `number & {val: ?val}` is not an instance of type This
+//│ ║  l.17: 	n = Number { val = 1 }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.+1: 	addSame n n
+//│ ║        	        ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.92: 	def addSame a = a.Add a
+//│ ╙──      	                ^
 //│ ╔══[ERROR] Type mismatch in application:
 //│ ║  l.+1: 	addSame n n
 //│ ║        	^^^^^^^^^^^
@@ -129,6 +220,18 @@ addSame n n
 addTwo s n
 //│ ╔══[ERROR] Type mismatch in application:
 //│ ║  l.+1: 	addTwo s n
+//│ ║        	^^^^^^^^
+//│ ╟── application of type `Str & {val: ?val}` is not an instance of type This
+//│ ║  l.56: 	s = Str { val = "hey" }
+//│ ║        	    ^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.+1: 	addTwo s n
+//│ ║        	       ^
+//│ ╟── Note: constraint arises from reference:
+//│ ║  l.36: 	def addTwo a0 a1 = a0.Add a1
+//│ ╙──      	                   ^^
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.+1: 	addTwo s n
 //│ ║        	^^^^^^^^^^
 //│ ╟── application of type `number & {val: ?val}` is not an instance of type Str
 //│ ║  l.17: 	n = Number { val = 1 }
@@ -140,12 +243,21 @@ addTwo s n
 //│ ║  l.12: 	class Str: Addable[Str] & { val: string }
 //│ ║        	                   ^^^
 //│ ╟── from reference:
-//│ ║  l.27: 	def addTwo a0 a1 = a0.Add a1
+//│ ║  l.36: 	def addTwo a0 a1 = a0.Add a1
 //│ ╙──      	                          ^^
 //│ res: error
 
 class Str_bad_0: Addable[Str_bad_0] & { val: string }
   method Add that = Str_bad_0 { val = this.val + that.val }
+//│ ╔══[ERROR] Type mismatch in operator application:
+//│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
+//│ ║        	                                      ^^^^^^^^^^
+//│ ╟── type `string` does not match type `int`
+//│ ║  l.+1: 	class Str_bad_0: Addable[Str_bad_0] & { val: string }
+//│ ║        	                                             ^^^^^^
+//│ ╟── but it flows into field selection with expected type `int`
+//│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
+//│ ╙──      	                                      ^^^^^^^^
 //│ ╔══[ERROR] Type mismatch in application:
 //│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
 //│ ║        	                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -165,5 +277,5 @@ class Str_bad_0: Addable[Str_bad_0] & { val: string }
 //│ ║  l.+2: 	  method Add that = Str_bad_0 { val = this.val + that.val }
 //│ ╙──      	                                                 ^^^^^^^^
 //│ Defined class Str_bad_0
-//│ Defined Str_bad_0.Add: (Str_bad_0 & {val: nothing}) -> {val: int} -> (error | (Str_bad_0 with {val: int}))
+//│ Defined Str_bad_0.Add: (Str_bad_0 & this) -> {val: int} -> (error | (Str_bad_0 with {val: error | int}))
 

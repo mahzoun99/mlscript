@@ -36,9 +36,9 @@ class Foo2[A]
 class Bar2: Foo2[int] & { x: int }
   method M2 = 1
 //│ Defined class Foo2
-//│ Declared Foo2.M2: Foo2['A] -> 'A
+//│ Declared Foo2.M2: (Foo2['A] & this) -> 'A
 //│ Defined class Bar2
-//│ Defined Bar2.M2: Bar2 -> 1
+//│ Defined Bar2.M2: (Bar2 & this) -> 1
 
 class Bar3: Foo2[int]
 //│ Defined class Bar3
@@ -114,7 +114,16 @@ c = b: Foo2[string]
 //│  = Bar2 { x: 1 }
 
 c.M2
-//│ res: string
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.116: 	c.M2
+//│ ║         	^^^^
+//│ ╟── type `Foo2[string]` is not an instance of type This
+//│ ║  l.103: 	c = b: Foo2[string]
+//│ ║         	       ^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.116: 	c.M2
+//│ ╙──       	^
+//│ res: error | string
 //│    = 1
 
 d = b: Bar2
@@ -122,7 +131,16 @@ d = b: Bar2
 //│  = Bar2 { x: 1 }
 
 d.M2
-//│ res: int
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.133: 	d.M2
+//│ ║         	^^^^
+//│ ╟── type `Bar2` is not an instance of type This
+//│ ║  l.129: 	d = b: Bar2
+//│ ║         	       ^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.133: 	d.M2
+//│ ╙──       	^
+//│ res: error | int
 //│    = 1
 
 d: Foo2['a]
@@ -132,10 +150,10 @@ d: Foo2['a]
 :e
 d: Foo2[string]
 //│ ╔══[ERROR] Type mismatch in type ascription:
-//│ ║  l.133: 	d: Foo2[string]
+//│ ║  l.151: 	d: Foo2[string]
 //│ ║         	^
 //│ ╟── type `string` does not match type `int`
-//│ ║  l.133: 	d: Foo2[string]
+//│ ║  l.151: 	d: Foo2[string]
 //│ ║         	        ^^^^^^
 //│ ╟── Note: constraint arises from type reference:
 //│ ║  l.36: 	class Bar2: Foo2[int] & { x: int }

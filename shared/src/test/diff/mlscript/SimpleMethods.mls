@@ -13,19 +13,37 @@ class C0
 //│ ║  l.4: 	  method Foo0[A](a: A) = a + 1
 //│ ╙──     	              ^
 //│ Defined class C0
-//│ Defined C0.Foo0: C0 -> anything -> (error | int)
-//│ Defined C0.Foo1: C0 -> 'A -> {a: 'A}
+//│ Defined C0.Foo0: (C0 & this) -> anything -> (error | int)
+//│ Defined C0.Foo1: (C0 & this) -> 'A -> {a: 'A}
 
 (C0{}).Foo0
-//│ res: anything -> (error | int)
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.19: 	(C0{}).Foo0
+//│ ║        	^^^^^^^^^^^
+//│ ╟── application of type `C0` is not an instance of type This
+//│ ║  l.19: 	(C0{}).Foo0
+//│ ║        	 ^^^^
+//│ ╟── Note: class C0 is defined at: 
+//│ ║  l.3: 	class C0
+//│ ╙──     	      ^^
+//│ res: anything -> (error | int) | error
 //│    = [Function: Foo0]
 
 f1 = (C0{}).Foo1
-//│ f1: 'A -> {a: 'A}
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.32: 	f1 = (C0{}).Foo1
+//│ ║        	     ^^^^^^^^^^^
+//│ ╟── application of type `C0` is not an instance of type This
+//│ ║  l.32: 	f1 = (C0{}).Foo1
+//│ ║        	      ^^^^
+//│ ╟── Note: class C0 is defined at: 
+//│ ║  l.3: 	class C0
+//│ ╙──     	      ^^
+//│ f1: 'A -> {a: 'A} | error
 //│   = [Function: Foo1]
 
 f1 1
-//│ res: {a: 1}
+//│ res: error | {a: 1}
 //│    = { a: 1 }
 
 
@@ -33,50 +51,50 @@ class C1
   method F: int
   method F = 1
 //│ Defined class C1
-//│ Declared C1.F: C1 -> int
-//│ Defined C1.F: C1 -> 1
+//│ Declared C1.F: (C1 & this) -> int
+//│ Defined C1.F: (C1 & this) -> 1
 
 class C2: C1
   method F = 2
 //│ Defined class C2
-//│ Defined C2.F: C2 -> 2
+//│ Defined C2.F: (C2 & this) -> 2
 
 
 class C3
   method F: 'a -> 'a
   method F = id
 //│ Defined class C3
-//│ Declared C3.F: C3 -> 'a -> 'a
-//│ Defined C3.F: C3 -> 'a -> 'a
+//│ Declared C3.F: (C3 & this) -> 'a -> 'a
+//│ Defined C3.F: (C3 & this) -> 'a -> 'a
 
 class C4: C3
   method F = id
 //│ Defined class C4
-//│ Defined C4.F: C4 -> 'a -> 'a
+//│ Defined C4.F: (C4 & this) -> 'a -> 'a
 
 
 :e
 class C5[A]
   method F(x: A) = x + 1
 //│ ╔══[ERROR] Type mismatch in operator application:
-//│ ║  l.60: 	  method F(x: A) = x + 1
+//│ ║  l.78: 	  method F(x: A) = x + 1
 //│ ║        	                   ^^^
 //│ ╟── reference of type `A` does not match type `int`
-//│ ║  l.60: 	  method F(x: A) = x + 1
+//│ ║  l.78: 	  method F(x: A) = x + 1
 //│ ║        	                   ^
 //│ ╟── Note: class type parameter A is defined at: 
-//│ ║  l.59: 	class C5[A]
+//│ ║  l.77: 	class C5[A]
 //│ ╙──      	         ^
 //│ Defined class C5
-//│ Defined C5.F: C5['A] -> 'A -> (error | int)
+//│ Defined C5.F: (C5['A] & this) -> 'A -> (error | int)
 
 
 class True[A]
     method Test f = true
     method True = this.Test (fun x -> error)
 //│ Defined class True
-//│ Defined True.Test: true -> anything -> true
-//│ Defined True.True: true -> true
+//│ Defined True.Test: (true & this) -> anything -> true
+//│ Defined True.True: (true & this) -> true
 
 
 :e
@@ -84,11 +102,11 @@ class Hey
     rec method A = B
     rec method B = 1
 //│ ╔══[ERROR] identifier not found: B
-//│ ║  l.84: 	    rec method A = B
-//│ ╙──      	                   ^
+//│ ║  l.102: 	    rec method A = B
+//│ ╙──       	                   ^
 //│ Defined class Hey
-//│ Defined Hey.A: Hey -> error
-//│ Defined Hey.B: Hey -> 1
+//│ Defined Hey.A: (Hey & this) -> error
+//│ Defined Hey.B: (Hey & this) -> 1
 //│ Code generation encountered an error:
 //│   unresolved symbol B
 

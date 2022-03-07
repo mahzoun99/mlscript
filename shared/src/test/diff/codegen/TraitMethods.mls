@@ -8,14 +8,14 @@
 trait T0
   method Foo: int
 //│ Defined trait T0
-//│ Declared T0.Foo: t0 -> int
+//│ Declared T0.Foo: (t0 & this) -> int
 //│ // End of generated code
 
 :js
 trait T1
   method Foo = 1
 //│ Defined trait T1
-//│ Defined T1.Foo: t1 -> 1
+//│ Defined T1.Foo: (t1 & this) -> 1
 //│ // End of generated code
 
 :js
@@ -66,6 +66,6 @@ B.Foo
 //│ // End of generated code
 //│ b: B
 //│  = B {}
-//│ res: (B & t0 & t1) -> 1
+//│ res: (B & t0 & t1 & this) -> 1
 //│    = undefined
 

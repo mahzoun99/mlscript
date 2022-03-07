@@ -10,9 +10,9 @@ class Box[T]: { inner: T }
   method Map f = Box { inner = f this.inner }
   method Get = this.inner
 //│ Defined class Box
-//│ Declared Box.Map: Box['T] -> ('T -> 'a) -> Box['a]
-//│ Defined Box.Map: (Box['T] & {inner: 'T & 'a}) -> ('a -> ('b & 'T0)) -> (Box['T0] with {inner: 'b})
-//│ Defined Box.Get: (Box['T] & {inner: 'T & 'a}) -> 'a
+//│ Declared Box.Map: (Box['T] & this) -> ('T -> 'a) -> Box['a]
+//│ Defined Box.Map: (Box['T] & this) -> ('T -> ('a & 'T0)) -> (Box['T0] with {inner: 'a})
+//│ Defined Box.Get: (Box['T] & this) -> 'T
 //│ // Prelude
 //│ class Box {
 //│   constructor(fields) {
@@ -50,7 +50,16 @@ def box2 = box1.Map (fun x -> add x 1)
 //│ // End of generated code
 //│ box1: Box['T .. 1 | 'T] with {inner: 1}
 //│     = Box { inner: 1 }
-//│ box2: Box['a .. 'a | int]
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.43: 	def box2 = box1.Map (fun x -> add x 1)
+//│ ║        	           ^^^^^^^^
+//│ ╟── application of type `Box[?T] & {inner: ?inner}` is not an instance of type This
+//│ ║  l.31: 	def Box value = Box { inner = value }
+//│ ║        	                ^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.43: 	def box2 = box1.Map (fun x -> add x 1)
+//│ ╙──      	           ^^^^
+//│ box2: Box['a .. 'a | int] | error
 //│     = Box { inner: 2 }
 
 :js
@@ -58,6 +67,15 @@ box2.inner + box2.Get
 //│ // Query 1
 //│ res = box2.inner + box2.Get;
 //│ // End of generated code
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.66: 	box2.inner + box2.Get
+//│ ║        	             ^^^^^^^^
+//│ ╟── type `Box[?a]` is not an instance of type This
+//│ ║  l.9: 	  method Map: (T -> 'a) -> Box['a]
+//│ ║       	                           ^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.66: 	box2.inner + box2.Get
+//│ ╙──      	             ^^^^
 //│ res: int
 //│    = 4
 
@@ -71,7 +89,16 @@ b = Box "hello"
 //│  = Box { inner: 'hello' }
 
 b.Get
-//│ res: "hello"
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.91: 	b.Get
+//│ ║        	^^^^^
+//│ ╟── type `Box[string] & {inner: "hello"}` is not an instance of type This
+//│ ║  l.82: 	def b: Box[string] & { inner: "hello" }
+//│ ║        	       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.91: 	b.Get
+//│ ╙──      	^
+//│ res: error | string
 //│    = 'hello'
 
 :js
@@ -80,8 +107,8 @@ class MyBox: Box[int] & { info: string }
   method Inc = MyBox { inner = this.inner + 1; info = this.info }
 def MyBox inner info = MyBox { inner; info }
 //│ Defined class MyBox
-//│ Defined MyBox.Map: (MyBox & {info: string & 'a, inner: int & 'b}) -> ('b -> ('c & 'T)) -> (Box['T] with {info: 'a, inner: 'c})
-//│ Defined MyBox.Inc: MyBox -> (MyBox & {info: nothing})
+//│ Defined MyBox.Map: (MyBox & this) -> (int -> ('a & 'b)) -> (Box['b] with {info: string, inner: 'a})
+//│ Defined MyBox.Inc: (MyBox & this) -> MyBox
 //│ // Prelude
 //│ class MyBox extends Box {
 //│   constructor(fields) {
@@ -132,13 +159,49 @@ mb2.Get
 //│ // End of generated code
 //│ mb: MyBox & {info: "hello", inner: 1}
 //│   = MyBox { inner: 1, info: 'hello' }
-//│ mb: MyBox & {info: nothing}
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.142: 	mb = mb.Inc
+//│ ║         	     ^^^^^^
+//│ ╟── application of type `MyBox & {info: ?info, inner: ?inner}` is not an instance of type This
+//│ ║  l.108: 	def MyBox inner info = MyBox { inner; info }
+//│ ║         	                       ^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.142: 	mb = mb.Inc
+//│ ╙──       	     ^^
+//│ mb: error | MyBox
 //│   = MyBox { inner: 2, info: 'hello' }
-//│ res: int
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.143: 	mb.Get
+//│ ║         	^^^^^^
+//│ ╟── application of type `MyBox` is not an instance of type This
+//│ ║  l.107: 	  method Inc = MyBox { inner = this.inner + 1; info = this.info }
+//│ ║         	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.143: 	mb.Get
+//│ ╙──       	^^
+//│ res: error | int
 //│    = 2
-//│ mb2: Box['a .. 'a | int]
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.144: 	mb2 = mb.Map (fun x -> x * 3)
+//│ ║         	      ^^^^^^
+//│ ╟── application of type `MyBox` is not an instance of type This
+//│ ║  l.107: 	  method Inc = MyBox { inner = this.inner + 1; info = this.info }
+//│ ║         	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.144: 	mb2 = mb.Map (fun x -> x * 3)
+//│ ╙──       	      ^^
+//│ mb2: Box['a .. 'a | int] | error
 //│    = Box { inner: 6, info: 'hello' }
-//│ res: int
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.145: 	mb2.Get
+//│ ║         	^^^^^^^
+//│ ╟── type `Box[?a]` is not an instance of type This
+//│ ║  l.9: 	  method Map: (T -> 'a) -> Box['a]
+//│ ║       	                           ^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.145: 	mb2.Get
+//│ ╙──       	^^^
+//│ res: error | int
 //│    = 6
 
 // FIXME
@@ -150,10 +213,28 @@ MyBox.Map mb (fun x -> x * 3)
 //│ // Query 2
 //│ res = MyBox1.Map(mb1)((x) => x * 3);
 //│ // End of generated code
-//│ res: Box['T .. 'T | int] with {info: nothing, inner: int}
+//│ ╔══[ERROR] Type mismatch in field selection:
+//│ ║  l.209: 	mb.(MyBox.Map) (fun x -> x * 3)
+//│ ║         	^^^^^^^^^^^^^^
+//│ ╟── application of type `MyBox` is not an instance of type This
+//│ ║  l.107: 	  method Inc = MyBox { inner = this.inner + 1; info = this.info }
+//│ ║         	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.209: 	mb.(MyBox.Map) (fun x -> x * 3)
+//│ ╙──       	^^
+//│ res: (Box['a .. int | 'a] with {info: string, inner: int}) | error
 //│ Runtime error:
 //│   TypeError: mb1.MyBox.Map is not a function
-//│ res: Box['T .. 'T | int] with {info: nothing, inner: int}
+//│ ╔══[ERROR] Type mismatch in application:
+//│ ║  l.210: 	MyBox.Map mb (fun x -> x * 3)
+//│ ║         	^^^^^^^^^^^^
+//│ ╟── application of type `MyBox` is not an instance of type This
+//│ ║  l.107: 	  method Inc = MyBox { inner = this.inner + 1; info = this.info }
+//│ ║         	               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//│ ╟── but it flows into reference with expected type `this`
+//│ ║  l.210: 	MyBox.Map mb (fun x -> x * 3)
+//│ ╙──       	          ^^
+//│ res: (Box['a .. int | 'a] with {info: string, inner: int}) | error
 //│ Runtime error:
 //│   TypeError: MyBox1.Map is not a function
 
